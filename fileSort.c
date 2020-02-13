@@ -16,4 +16,10 @@ int main (int argc, char * argv[]){
     printf("File does not exist\n");
     return 1;
   }
+
+  char *c = (char *) calloc(1000000000, sizeof(char));
+  while(read(file,c,1000000000)>0){
+    printf("%s\n", c);
+    printf("AAAAAA\n");
+  }
 }
