@@ -5,6 +5,9 @@
 
 #define INT_MAX 2147483647
 
+int insertionSort( void* toSort, int (*comparator)(void*, void*);
+int quickSort( void* toSort, int (*) comparator(void*, void*));
+
 
 int main (int argc, char * argv[]){
 
