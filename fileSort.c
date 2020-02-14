@@ -4,6 +4,8 @@
 #include <fcntl.h>
 
 #define INT_MAX 2147483647
+#define pnum(num) printf("%d\n",num)
+#define pstr(str) printf("%s\n",str)
 
 typedef union token_t {
    char* str;
@@ -11,19 +13,65 @@ typedef union token_t {
 } token; 
 
 typedef struct ArrayList_t{
+   // 0 if string, anything else if num
    int is_num;
-   size_t size;
-   size_t len;
-   token* things
-} array;
+   // total size of the Array allocated
+   size_t total_size;
+   // number of tokens actually used in the array
+   size_t current_cap;
+   // list of tokens
+   token** token_list;
+} ArrayList;
 /*
- make a method to declare a new arraylist
- make another method for add ( handle overlfow)
+   make a method to declare a new arraylist
+   make another method for add ( handle overlfow)
+   
+   1) open file put into char array
+   2) determine if num or string parse char array into ArrayList
+   3) sort 
+
+ 
+   1) 2 pointers until comma
+   2) count len of token
+   3) allocate memory for token
+   4) add to data structure
+     
 
 */
-void add(array a, token t);
+
+void add(ArrayList *a, token t);
+
+
+ArrayList* init(size_t size){
+   ArrayList* a = malloc(sizeof(ArrayList)); 
+   a->total_size = size;
+   a->current_cap = 0;
+   a->is_num = 0;
+   // create a list of tokens
+   token** list_of_tokens = malloc(sizeof(token) * size);
+   for(int i = 0; i < a->total_size; i++){
+      list_of_tokens[i] = malloc(sizeof(token));
+      list_of_tokens[i]->str = malloc(sizeof(char) * 10);
+      list_of_tokens[i]->str = 3;
+   }
+  a->token_list = list_of_tokens;
+}
+
+void print_array(ArrayList *list){
+   int i;
+   for(i = 0; i < list->total_size; i++){
+      if(list->is_num){
+         pnum(list->token_list[i]->str);
+      } else {
+         pstr(list->token_list[i]->str);
+      }
+   }
+}
 
 int main (int argc, char * argv[]){
+    ArrayList* list = init(32);
+    print_array(list);
+
    if(argc!=3){
       //throw error, incorrect arguements
       printf("Incorrect arguements\n");
@@ -36,18 +84,14 @@ int main (int argc, char * argv[]){
       return 1;
    }
 
-   char *c = (char *) calloc(INT_MAX, sizeof(char));
+   char *c = *(char *) calloc(INT_MAX, sizeof(char));
    while(read(file,c,INT_MAX)>0){
       printf("%s\n", c);
       printf("AAAAAA\n");
    }
 }
 
-/*
 
-   1) 2 pointers until comma
-   2) count len of token
-   3) allocate memory for token
-   4) add to data structure
 
-*/
+
+char *a = "hello";
