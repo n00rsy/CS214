@@ -1,2 +1,2 @@
 make:
-	gcc fileSort.c -std=c99 -o c 
+	gcc fileSort.c -o c 

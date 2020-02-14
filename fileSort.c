@@ -2,10 +2,15 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
 #define INT_MAX 2147483647
-#define pnum(num) printf("%d\n",num)
-#define pstr(str) printf("%s\n",str)
+
+void pnum(int num){
+   printf("%d\n",num);
+}
+
+void pstr(char* str){
+   printf("%s\n",str);
+}
 
 typedef union token_t {
    char* str;
@@ -22,6 +27,8 @@ typedef struct ArrayList_t{
    // list of tokens
    token** token_list;
 } ArrayList;
+
+ArrayList *array;
 /*
    make a method to declare a new arraylist
    make another method for add ( handle overlfow)
@@ -39,31 +46,31 @@ typedef struct ArrayList_t{
 
 */
 
-void add(ArrayList *a, token t);
+void add(token *t);
 
-
-ArrayList* init(size_t size){
-   ArrayList* a = malloc(sizeof(ArrayList));
-   a->total_size = size;
-   a->current_cap = 0;
-   a->is_num = 0;
+void init(size_t size){
+   array = malloc(sizeof(ArrayList));
+   array->total_size = size;
+   array->current_cap = 0;
+   array->is_num = 1;
    // create a list of tokens
    token** list_of_tokens = malloc(sizeof(token) * size);
-   for(int i = 0; i < a->total_size; i++){
+   int i; 
+   for(i = 0; i < array->total_size; i++){
       list_of_tokens[i] = malloc(sizeof(token));
       list_of_tokens[i]->str = malloc(sizeof(char) * 10);
       list_of_tokens[i]->str = 3;
    }
-  a->token_list = list_of_tokens;
+  array->token_list = list_of_tokens;
 }
 
-void print_array(ArrayList *list){
+void print_array(){
    int i;
-   for(i = 0; i < list->total_size; i++){
-      if(list->is_num){
-         pnum(list->token_list[i]->str);
+   for(i = 0; i < array->total_size; i++){
+      if(array->is_num){
+         pnum(array->token_list[i]->str);
       } else {
-         pstr(list->token_list[i]->str);
+         pstr(array->token_list[i]->str);
       }
    }
 }
@@ -76,9 +83,10 @@ int checkIfInt(token * t){
 
 }
 
+
 int main (int argc, char * argv[]){
-    //ArrayList* list = init(32);
-    //print_array(list);
+   init(10);
+   print_array(array);
 
    if(argc!=3){
       //throw error, incorrect arguements
@@ -92,18 +100,16 @@ int main (int argc, char * argv[]){
       return 1;
    }
 
-   char *c = *(char *) calloc(INT_MAX, sizeof(char));
+   char *c = (char *) calloc(INT_MAX, sizeof(char));
    while(read(file,c,INT_MAX)>0){
-      printf("%s\n", c);
-      printf("AAAAAA\n");
+       // printf("%s\n", c);
+       // printf("%s\n", "AAAAA");
    }
+
    token *test = malloc(sizeof(token));
-   test->str = "";
+   test->str = "3";
    pnum(checkIfInt(test));
 
 }
 
 
-
-
-char *a = "hello";
