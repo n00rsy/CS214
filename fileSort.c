@@ -10,7 +10,7 @@
 typedef union token_t {
    char* str;
    size_t len_str;
-} token; 
+} token;
 
 typedef struct ArrayList_t{
    // 0 if string, anything else if num
@@ -25,17 +25,17 @@ typedef struct ArrayList_t{
 /*
    make a method to declare a new arraylist
    make another method for add ( handle overlfow)
-   
+
    1) open file put into char array
    2) determine if num or string parse char array into ArrayList
-   3) sort 
+   3) sort
 
- 
+
    1) 2 pointers until comma
    2) count len of token
    3) allocate memory for token
    4) add to data structure
-     
+
 
 */
 
@@ -43,7 +43,7 @@ void add(ArrayList *a, token t);
 
 
 ArrayList* init(size_t size){
-   ArrayList* a = malloc(sizeof(ArrayList)); 
+   ArrayList* a = malloc(sizeof(ArrayList));
    a->total_size = size;
    a->current_cap = 0;
    a->is_num = 0;
@@ -68,9 +68,17 @@ void print_array(ArrayList *list){
    }
 }
 
+int checkIfInt(token * t){
+  if(t->str[0]>=48 && t->str[0]<=57){
+    return 1;
+  }
+  return 0;
+
+}
+
 int main (int argc, char * argv[]){
-    ArrayList* list = init(32);
-    print_array(list);
+    //ArrayList* list = init(32);
+    //print_array(list);
 
    if(argc!=3){
       //throw error, incorrect arguements
@@ -89,6 +97,10 @@ int main (int argc, char * argv[]){
       printf("%s\n", c);
       printf("AAAAAA\n");
    }
+   token *test = malloc(sizeof(token));
+   test->str = "";
+   pnum(checkIfInt(test));
+
 }
 
 
