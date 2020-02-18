@@ -104,8 +104,8 @@ int p2 = 0;
 		   p2++;
 		}
 		//extract token and put in data structure
-		char * str = substring( s, p1, p2-p1+1);
-		//printf("%s\n", str);
+		char *str = substring( s, p1 + 1, p2 - p1);
+		// printf("%s\n", str);
 		token *t = malloc(sizeof(token));
 		t->str = str;
 		add(t);
