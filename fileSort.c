@@ -78,7 +78,6 @@ void add(token *t){
 	array->token_list[array->current_size] = t;
 	array->current_size+=1;
 
->>>>>>> 96bf512d9a69eed8ae0a7f2f0b4f8dc4067eb623
 }
 
 void init(size_t size){
