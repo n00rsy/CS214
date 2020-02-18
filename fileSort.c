@@ -4,6 +4,9 @@
 #include <fcntl.h>
 #define INT_MAX 1000000000
 //2147483647
+
+
+
 void pnum(int num){
    printf("%d\n",num);
 }
@@ -33,7 +36,7 @@ typedef struct ArrayList_t{
    // list of tokens
    token** token_list;
 } ArrayList;
-
+void add(token*);
 ArrayList *array;
 /*
    make a method to declare a new arraylist
@@ -60,9 +63,64 @@ size_t strLength(char * s){
    }
    return c;
 }
+char *substring(char *string, int position, int length)
+{
+   char *pointer;
+   int c;
+ 
+   pointer = malloc(length+1);
+   
+   if (pointer == NULL)
+   {
+      printf("Unable to allocate memory.\n");
+      exit(1);
+   }
+ 
+   for (c = 0 ; c < length ; c++)
+   {
+      *(pointer+c) = *(string+position-1);      
+      string++;  
+   }
+ 
+   *(pointer+c) = '\0';
+ 
+   return pointer;
+}
+
+int isSpecialChar(char c){
+   if(c==' ' || c==',' || c=='\t' || c== '\n'){
+	return 1;
+   }
+	return 0;
+}
+
+void strToArrayList(char * s){
+
+int p1 = 0;
+int p2 = 0;
+	while(s[p2] != '\0'){
+		//scan token
+		while(s[p2] != ','&& s[p2] != '\0'){
+		   p2++;
+		}
+		//extract token and put in data structure
+		char * str = substring( s, p1, p2-p1+1);
+		//printf("%s\n", str);
+		token *t = malloc(sizeof(token));
+		t->str = str;
+		add(t);
+
+		//move past comma, whitespace then reset
+		//printf("p2 is at: %c\n", s[p2]);
+		while(s[p2]== ' ' || s[p2]== ',' || s[p2]== '\t' || s[p2]== '\n'){
+		   p2++;
+		}
+		printf("p2 is at: after loop '%c'\n", s[p2]);
+		p1=p2;
+	}
+}
 
 void add(token *t){
-
    if(array->current_size >= array->total_size){
       //make arrray bigger		
       // should we worry about freeing memory of old list? - RA 
@@ -141,7 +199,7 @@ int checkIfInt(token * t){
 
 int main (int argc, char * argv[]){
    init(100);
-
+/*
    int i;
    for(i=0;i<1000;i++){
       token *test = malloc(sizeof(token));
@@ -157,6 +215,7 @@ int main (int argc, char * argv[]){
        add(test);
    }   
    print_array();
+*/
    if(argc!=3){
       //throw error, incorrect arguements
       printf("Incorrect arguements\n");
@@ -174,7 +233,8 @@ int main (int argc, char * argv[]){
       // printf("%s\n", c);
       // printf("%s\n", "AAAAA");
    }
-
+   strToArrayList(c);
+   print_array();
    //token *test = malloc(sizeof(token));
    //test->str = "3";
    //pnum(checkIfInt(test));
