@@ -12,6 +12,12 @@ void pstr(char* str){
    printf("%s\n",str);
 }
 
+// print string without new line, i need cuz ilab wont let me scroll all the way back
+// so I cant see the initial printfs
+void pstrno( char* str){
+   printf("%s ",str);
+}
+
 typedef union token_t {
    char* str;
    int num;
@@ -48,35 +54,40 @@ ArrayList *array;
 
 size_t strLength(char * s){
 
-	int c = 0;
-	while(s[c] != '\0'){
-		c++;
-	}
-	return c;
+   int c = 0;
+   while(s[c] != '\0'){
+      c++;
+   }
+   return c;
 }
 
 void add(token *t){
 
-	if(array->current_size>=array->total_size){
-		//make arrray bigger		
-		token** newList = malloc(sizeof(token)*array->total_size*2);
-		int i;
-		for(i=0; i< array->total_size;i++){
-			newList[i] = malloc(sizeof(token));
-			size_t strLen = strLength(array->token_list[i]->str);
-			newList[i]-> str = malloc(sizeof(char)*strLen+1);
-			newList[i]->str[strLen] = '\0';
-			char j;
-			for(j=0;array->token_list[i]->str[j] != '\0';++j){
-				newList[i]->str[j] = array->token_list[i]->str[j];
-			}
-		}
-		array->total_size*=2;
-	}
-	
-	array->token_list[array->current_size] = malloc(sizeof(token));
-	array->token_list[array->current_size] = t;
-	array->current_size+=1;
+   if(array->current_size >= array->total_size){
+      //make arrray bigger		
+      // should we worry about freeing memory of old list? - RA 
+      // pstr("COPYING");
+      // pnum(array->current_size);
+      token** newList = malloc(sizeof(token)*array->total_size*2);
+      int i;
+      for(i=0; i< array->total_size;i++){
+         newList[i] = malloc(sizeof(token));
+         size_t strLen = strLength(array->token_list[i]->str);
+         newList[i]-> str = malloc(sizeof(char)*strLen+1);
+         newList[i]->str[strLen] = '\0';
+         char j;
+         for(j=0;array->token_list[i]->str[j] != '\0';++j){
+            newList[i]->str[j] = array->token_list[i]->str[j];
+         }
+      }
+      // this fixes junk files in the bieginning
+      array->token_list = newList;
+      array->total_size*=2;
+   }
+
+   array->token_list[array->current_size] = malloc(sizeof(token));
+   array->token_list[array->current_size] = t;
+   array->current_size+=1;
 
 }
 
@@ -93,7 +104,7 @@ void init(size_t size){
    for(i = 0; i < array->total_size; i++){
       list_of_tokens[i] = malloc(sizeof(token));
    }
-  array->token_list = list_of_tokens;
+   array->token_list = list_of_tokens;
 }
 
 void print_array(){
@@ -102,41 +113,50 @@ void print_array(){
       if(array->is_num){
          pnum(array->token_list[i]->str);
       } else {
-        pstr(array->token_list[i]->str);
+         pstr(array->token_list[i]->str);
+      }
+   }
+}
+
+// print first n elements of array
+void printn(int n){
+   int i;
+   for(i = 0; i < n; i++){
+      if(array->is_num){
+         pnum(array->token_list[i]->str);
+      } else {
+         // pstr(array->token_list[i]->str);
+         pstr(array->token_list[i]->str);
       }
    }
 }
 
 int checkIfInt(token * t){
-  if(t->str[0]>=48 && t->str[0]<=57){
-    return 1;
-  }
-  return 0;
+   if(t->str[0]>=48 && t->str[0]<=57){
+      return 1;
+   }
+   return 0;
 
 }
 
-
-
 int main (int argc, char * argv[]){
-   init(10);
+   init(100);
 
    int i;
-   for(i=0;i<500;i++){
-	token *test = malloc(sizeof(token));
-   	if(i%2==0){
-	test->str = "NOOR";
-	}
-	else if(i%3==0){
-	test->str = "LIKES";
-	}
-	else{
-	test->str = "RIDHWAAN";
-	}	
-	add(test);
-}   
-printf("FINISHED ADDING\n");
-   print_array(array);
-
+   for(i=0;i<1000;i++){
+      token *test = malloc(sizeof(token));
+      if(i%2==0){
+         test->str = "X";
+      }
+      else if(i%3==0){
+         test->str = "X";
+      }
+      else{
+         test->str = "X";
+      }	
+       add(test);
+   }   
+   print_array();
    if(argc!=3){
       //throw error, incorrect arguements
       printf("Incorrect arguements\n");
@@ -151,8 +171,8 @@ printf("FINISHED ADDING\n");
 
    char *c = (char *) calloc(INT_MAX, sizeof(char));
    while(read(file,c,INT_MAX)>0){
-       // printf("%s\n", c);
-       // printf("%s\n", "AAAAA");
+      // printf("%s\n", c);
+      // printf("%s\n", "AAAAA");
    }
 
    //token *test = malloc(sizeof(token));
