@@ -46,7 +46,14 @@ ArrayList *array;
 
 */
 
-void add(token *t);
+void add(token *t){
+ if(current_cap == total_size){
+    // resize
+ } else {
+  array->token_list[current_cap + 1] = t;
+  current_cap++;
+ }
+}
 
 void init(size_t size){
    array = malloc(sizeof(ArrayList));
