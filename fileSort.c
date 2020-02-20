@@ -2,9 +2,34 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#define INT_MAX 1000000000
-//2147483647
+#define INT_MAX 2147483647
 
+
+
+int compare_int(void* a, void *b){
+ int first = *((int*) a);
+ int second = *((int*) b);
+ if(first == second){
+        return 0;
+ }
+
+ if(first > second){
+        return 1;
+ }
+  return -1;
+}
+
+int strcmp(char *first, char *second){
+   while (*first != '\0' && *second != '\0'  && *first == *second) {
+      first++;
+      second++;
+   }
+   return *first - *second;
+}
+
+
+int insertionSort(void* toSort, int (*comparator)(void*, void*));
+int quickSort(void* toSort, int (*comparator)(void*, void*));
 
 
 void pnum(int num){
@@ -63,61 +88,60 @@ size_t strLength(char * s){
    }
    return c;
 }
-char *substring(char *string, int position, int length)
-{
+char *substring(char *string, int position, int length){
    char *pointer;
    int c;
- 
+
    pointer = malloc(length+1);
-   
+
    if (pointer == NULL)
    {
       printf("Unable to allocate memory.\n");
       exit(1);
    }
- 
+
    for (c = 0 ; c < length ; c++)
    {
       *(pointer+c) = *(string+position-1);      
       string++;  
    }
- 
+
    *(pointer+c) = '\0';
- 
+
    return pointer;
 }
 
 int isSpecialChar(char c){
    if(c==' ' || c==',' || c=='\t' || c== '\n'){
-	return 1;
+      return 1;
    }
-	return 0;
+   return 0;
 }
 
 void strToArrayList(char * s){
 
-int p1 = 0;
-int p2 = 0;
-	while(s[p2] != '\0'){
-		//scan token
-		while(s[p2] != ','&& s[p2] != '\0'){
-		   p2++;
-		}
-		//extract token and put in data structure
-		char *str = substring( s, p1 + 1, p2 - p1);
-		// printf("%s\n", str);
-		token *t = malloc(sizeof(token));
-		t->str = str;
-		add(t);
+   int p1 = 0;
+   int p2 = 0;
+   while(s[p2] != '\0'){
+      //scan token
+      while(s[p2] != ','&& s[p2] != '\0'){
+         p2++;
+      }
+      //extract token and put in data structure
+      char *str = substring( s, p1 + 1, p2 - p1);
+      // printf("%s\n", str);
+      token *t = malloc(sizeof(token));
+      t->str = str;
+      add(t);
 
-		//move past comma, whitespace then reset
-		//printf("p2 is at: %c\n", s[p2]);
-		while(s[p2]== ' ' || s[p2]== ',' || s[p2]== '\t' || s[p2]== '\n'){
-		   p2++;
-		}
-		printf("p2 is at: after loop '%c'\n", s[p2]);
-		p1=p2;
-	}
+      //move past comma, whitespace then reset
+      //printf("p2 is at: %c\n", s[p2]);
+      while(s[p2]== ' ' || s[p2]== ',' || s[p2]== '\t' || s[p2]== '\n'){
+         p2++;
+      }
+      printf("p2 is at: after loop '%c'\n", s[p2]);
+      p1=p2;
+   }
 }
 
 void add(token *t){
@@ -149,13 +173,13 @@ void add(token *t){
 
 }
 
+
 void init(size_t size){
 
    array = malloc(sizeof(ArrayList));
    array->total_size = size;
    array->current_size = 0;
    array->is_num = 0;
-
    // create a list of tokens
    token** list_of_tokens = malloc(sizeof(token) * size);
    int i; 
@@ -199,23 +223,23 @@ int checkIfInt(token * t){
 
 int main (int argc, char * argv[]){
    init(100);
-/*
-   int i;
-   for(i=0;i<1000;i++){
+   /*
+      int i;
+      for(i=0;i<1000;i++){
       token *test = malloc(sizeof(token));
       if(i%2==0){
-         test->str = "X";
+      test->str = "X";
       }
       else if(i%3==0){
-         test->str = "X";
+      test->str = "X";
       }
       else{
-         test->str = "X";
+      test->str = "X";
       }	
-       add(test);
-   }   
-   print_array();
-*/
+      add(test);
+      }   
+      print_array();
+      */
    if(argc!=3){
       //throw error, incorrect arguements
       printf("Incorrect arguements\n");
@@ -230,15 +254,11 @@ int main (int argc, char * argv[]){
 
    char *c = (char *) calloc(INT_MAX, sizeof(char));
    while(read(file,c,INT_MAX)>0){
-      // printf("%s\n", c);
-      // printf("%s\n", "AAAAA");
    }
-   strToArrayList(c);
-   print_array();
-   //token *test = malloc(sizeof(token));
-   //test->str = "3";
-   //pnum(checkIfInt(test));
-
+   // strToArrayList(c);
+   char *first = "abc";
+   char *second = "xyz";
+   pnum(strcmp(first,second));
 }
 
 
