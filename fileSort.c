@@ -6,9 +6,10 @@
 
 
 
-int compare_int(void* a, void *b){
- int first = *((int*) a);
- int second = *((int*) b);
+int intcmp(void* a, void *b){
+
+ int first = *(int *)(&a);
+ int second = *(int *)(&b);
  if(first == second){
         return 0;
  }
@@ -222,8 +223,8 @@ int checkIfInt(token * t){
 }
 
 int main (int argc, char * argv[]){
-   init(100);
-   /*
+  init(100);
+      /*
       int i;
       for(i=0;i<1000;i++){
       token *test = malloc(sizeof(token));
@@ -256,9 +257,11 @@ int main (int argc, char * argv[]){
    while(read(file,c,INT_MAX)>0){
    }
    // strToArrayList(c);
-   char *first = "abc";
-   char *second = "xyz";
-   pnum(strcmp(first,second));
+   //char *first = "abc";
+   //char *second = "xyz";
+   int a = 4;
+   int b =10;
+   pnum(intcmp(a,b));
 }
 
 
