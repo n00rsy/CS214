@@ -7,17 +7,7 @@
 
 
 int intcmp(void* a, void *b){
-
- int first = *(int *)(&a);
- int second = *(int *)(&b);
- if(first == second){
-        return 0;
- }
-
- if(first > second){
-        return 1;
- }
-  return -1;
+ return (*(int *)a )- (*(int *)b);
 }
 
 int strcmp(char *first, char *second){
@@ -38,7 +28,7 @@ void pnum(int num){
 }
 
 void pstr(char* str){
-   printf("%s\n",str);
+   printf("'%s'\n",str);
 }
 
 // print string without new line, i need cuz ilab wont let me scroll all the way back
@@ -113,7 +103,7 @@ char *substring(char *string, int position, int length){
 }
 
 int isSpecialChar(char c){
-   if(c==' ' || c==',' || c=='\t' || c== '\n'){
+   if(c==' ' || c==',' || c=='\t' || c== '\n' || c == EOF){
       return 1;
    }
    return 0;
@@ -140,7 +130,7 @@ void strToArrayList(char * s){
       while(s[p2]== ' ' || s[p2]== ',' || s[p2]== '\t' || s[p2]== '\n'){
          p2++;
       }
-      printf("p2 is at: after loop '%c'\n", s[p2]);
+     // printf("p2 is at: after loop '%c'\n", s[p2]);
       p1=p2;
    }
 }
@@ -174,6 +164,24 @@ void add(token *t){
 
 }
 
+int insertionSort(void* toSort, int (*comparator)(void*, void*)){
+   int i, j;
+   token *key;
+   for(i=1;i< array->current_size;i++){
+	key = (array->token_list)[i];
+	j=i-1;
+	
+	while(j>=0 && comparator((array->token_list)[j]->str, key->str >0)){
+	
+	   (array->token_list)[j+1] = array->token_list[j];
+	   j=j-1;
+
+	}
+	array->token_list[j+1] = key;
+   } 
+}
+
+
 
 void init(size_t size){
 
@@ -192,6 +200,7 @@ void init(size_t size){
 
 void print_array(){
    int i;
+ // printf("%d\n", array->current_size);
    for(i = 0; i < array->current_size; i++){
       if(array->is_num){
          pnum(array->token_list[i]->str);
@@ -256,12 +265,18 @@ int main (int argc, char * argv[]){
    char *c = (char *) calloc(INT_MAX, sizeof(char));
    while(read(file,c,INT_MAX)>0){
    }
-   // strToArrayList(c);
+   strToArrayList(c);
    //char *first = "abc";
    //char *second = "xyz";
    int a = 4;
    int b =10;
-   pnum(intcmp(a,b));
+  // pnum(intcmp(&a,&b));
+   
+   print_array();
+   printf("\n\n\n");
+   insertionSort((void*)&array, &strcmp);
+   print_array();
+   
 }
 
 
