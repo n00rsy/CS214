@@ -10,12 +10,15 @@ int intcmp(void* a, void *b){
  return (*(int *)a )- (*(int *)b);
 }
 
-int strcmp(char *first, char *second){
-   while (*first != '\0' && *second != '\0'  && *first == *second) {
-      first++;
-      second++;
+int strcmp(void *first, void *second){
+
+   char * f = (char *)first;
+   char * s = (char *)second;
+   while (*f != '\0' && *s!= '\0'  && *f == *s) {
+      f++;
+      s++;
    }
-   return *first - *second;
+   return *f - *s;
 }
 
 
@@ -171,7 +174,7 @@ int insertionSort(void* toSort, int (*comparator)(void*, void*)){
 	key = (array->token_list)[i];
 	j=i-1;
 	
-	while(j>=0 && comparator((array->token_list)[j]->str, key->str >0)){
+	while(j>=0 && comparator(&((array->token_list)[j]->str), &(key->str))>0){
 	
 	   (array->token_list)[j+1] = array->token_list[j];
 	   j=j-1;
@@ -203,7 +206,7 @@ void print_array(){
  // printf("%d\n", array->current_size);
    for(i = 0; i < array->current_size; i++){
       if(array->is_num){
-         pnum(array->token_list[i]->str);
+         pnum(atoi(array->token_list[i]->str));
       } else {
          pstr(array->token_list[i]->str);
       }
@@ -215,7 +218,7 @@ void printn(int n){
    int i;
    for(i = 0; i < n; i++){
       if(array->is_num){
-         pnum(array->token_list[i]->str);
+         pnum(atoi(array->token_list[i]->str));
       } else {
          // pstr(array->token_list[i]->str);
          pstr(array->token_list[i]->str);
@@ -274,7 +277,10 @@ int main (int argc, char * argv[]){
    
    print_array();
    printf("\n\n\n");
-   insertionSort((void*)&array, &strcmp);
+
+   int (*strcmp_pointer)(void *, void *) = &strcmp;
+
+   insertionSort((void*)&array, strcmp_pointer);
    print_array();
    
 }
