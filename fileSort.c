@@ -118,7 +118,7 @@ void strToArrayList(char * s){
    int p2 = 0;
    while(s[p2] != '\0'){
       //scan token
-      while(s[p2] != ','&& s[p2] != '\0'){
+      while(s[p2] != ','&& s[p2] != '\0'&&  s[p2]!= ' ' && s[p2]!= ',' && s[p2]!= '\t' && s[p2]!= '\n' ){
          p2++;
       }
       //extract token and put in data structure
@@ -128,6 +128,9 @@ void strToArrayList(char * s){
       t->str = str;
       add(t);
 
+       while(s[p2] != ','&& s[p2] != '\0'){
+	 p2++;
+      }
       //move past comma, whitespace then reset
       //printf("p2 is at: %c\n", s[p2]);
       while(s[p2]== ' ' || s[p2]== ',' || s[p2]== '\t' || s[p2]== '\n'){
@@ -264,6 +267,8 @@ int main (int argc, char * argv[]){
       printf("File does not exist\n");
       return 1;
    }
+   
+   
 
    char *c = (char *) calloc(INT_MAX, sizeof(char));
    while(read(file,c,INT_MAX)>0){
@@ -278,9 +283,21 @@ int main (int argc, char * argv[]){
    print_array();
    printf("\n\n\n");
 
-   int (*strcmp_pointer)(void *, void *) = &strcmp;
+   char * insert = "-i";
+   char * quick = "-q";   
 
-   insertionSort((void*)&array, strcmp_pointer);
+   int (*cmp_pointer)(void *, void *) = &strcmp;
+
+   if(strcmp(argv[1], insert) == 0){
+      insertionSort((void*)&array, cmp_pointer);
+   }
+   else if (strcmp(argv[1], quick) == 0){
+      insertionSort((void*)&array, cmp_pointer);
+   }
+   else{
+      printf("Non-valid sort input\n");
+      return 1;
+   }
    print_array();
    
 }
