@@ -54,6 +54,7 @@ int intcmp_token(void* a, void *b){
  int first = ((token * )a)->num;
  int second = ((token *)b)->num;
 
+ printf("comparing: %d, %d\n", first, second);
  return first-second;
 }
 
@@ -243,7 +244,7 @@ void print_array(){
  // printf("%d\n", array->current_size);
    for(i = 0; i < array->current_size; i++){
       if(array->is_num){
-         pnum(atoi(array->token_list[i]->str));
+         pnum(array->token_list[i]->num);
       } else {
          pstr(array->token_list[i]->str);
       }
@@ -255,7 +256,7 @@ void printn(int n){
    int i;
    for(i = 0; i < n; i++){
       if(array->is_num){
-         pnum(atoi(array->token_list[i]->str));
+         pnum(array->token_list[i]->num);
       } else {
          // pstr(array->token_list[i]->str);
          pstr(array->token_list[i]->str);
@@ -302,8 +303,6 @@ int main (int argc, char * argv[]){
       return 1;
    }
    
-   
-
    char *c = (char *) calloc(INT_MAX, sizeof(char));
    while(read(file,c,INT_MAX)>0){
    }
@@ -323,10 +322,12 @@ int main (int argc, char * argv[]){
    int (*cmp_pointer)(void *, void *);
    if(checkIfInt(array->token_list[0]->str)==0){ //not an int
 	cmp_pointer = &strcmp_token;
+	array->is_num = 0;
    }
    else{
 	convertArrayToInts();
 	cmp_pointer = &intcmp_token;
+	array->is_num = 1;
    }
 
    if(strcmp(argv[1], insert) == 0){
