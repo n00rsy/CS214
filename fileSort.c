@@ -61,6 +61,7 @@ int strcmp_token(void *first, void *second){
 
    char * f = ((token *)first)->str;
    char * s = ((token *)second)->str;
+   printf("comparing: %s, %s\n", f ,s);
    while (*f != '\0' && *s!= '\0'  && *f == *s) {
       f++;
       s++;
@@ -208,7 +209,7 @@ int insertionSort(void* toSort, int (*comparator)(void*, void*)){
 	key = (array->token_list)[i];
 	j=i-1;
 	
-	while(j>=0 && comparator(&((array->token_list)[j]), &(key))>0){
+	while(j>=0 && comparator((array->token_list[j]), key)>0){
 	
 	   (array->token_list)[j+1] = array->token_list[j];
 	   j=j-1;
