@@ -5,6 +5,33 @@
 #define INT_MAX 2147483647
 
 
+typedef union token_t {
+   char* str;
+   int num;
+} token;
+
+typedef struct ArrayList_t{
+   // 0 if string, anything else if num
+   int is_num;
+   // total size of the Array allocated
+   size_t total_size;
+   // number of tokens actually used in the array
+   size_t current_size;
+   // list of tokens
+   token** token_list;
+} ArrayList;
+
+ArrayList *array;
+
+void convertArrayToInts(){
+  int i;
+  for(i=0;i<array->current_size;i++){
+    token * current = array->token_list[i];
+    int a = atoi(current->str);
+    current->num = a;
+  }
+}
+
 
 int intcmp(void* a, void *b){
  return (*(int *)a )- (*(int *)b);
@@ -20,6 +47,27 @@ int strcmp(void *first, void *second){
    }
    return *f - *s;
 }
+
+
+int intcmp_token(void* a, void *b){
+
+ int first = ((token * )a)->num;
+ int second = ((token *)b)->num;
+
+ return first-second;
+}
+
+int strcmp_token(void *first, void *second){
+
+   char * f = ((token *)first)->str;
+   char * s = ((token *)second)->str;
+   while (*f != '\0' && *s!= '\0'  && *f == *s) {
+      f++;
+      s++;
+   }
+   return *f - *s;
+}
+
 
 
 int insertionSort(void* toSort, int (*comparator)(void*, void*));
@@ -39,24 +87,7 @@ void pstr(char* str){
 void pstrno( char* str){
    printf("%s ",str);
 }
-
-typedef union token_t {
-   char* str;
-   int num;
-} token;
-
-typedef struct ArrayList_t{
-   // 0 if string, anything else if num
-   int is_num;
-   // total size of the Array allocated
-   size_t total_size;
-   // number of tokens actually used in the array
-   size_t current_size;
-   // list of tokens
-   token** token_list;
-} ArrayList;
 void add(token*);
-ArrayList *array;
 /*
    make a method to declare a new arraylist
    make another method for add ( handle overlfow)
@@ -177,7 +208,7 @@ int insertionSort(void* toSort, int (*comparator)(void*, void*)){
 	key = (array->token_list)[i];
 	j=i-1;
 	
-	while(j>=0 && comparator(&((array->token_list)[j]->str), &(key->str))>0){
+	while(j>=0 && comparator(&((array->token_list)[j]), &(key))>0){
 	
 	   (array->token_list)[j+1] = array->token_list[j];
 	   j=j-1;
@@ -187,10 +218,12 @@ int insertionSort(void* toSort, int (*comparator)(void*, void*)){
    } 
 }
 
+int quickSort(void* toSort, int (*comparator)(void*, void*)){
 
 
+
+}
 void init(size_t size){
-
    array = malloc(sizeof(ArrayList));
    array->total_size = size;
    array->current_size = 0;
@@ -229,8 +262,8 @@ void printn(int n){
    }
 }
 
-int checkIfInt(token * t){
-   if(t->str[0]>=48 && t->str[0]<=57){
+int checkIfInt(char * t){
+   if(t[0]>=48 && t[0]<=57){
       return 1;
    }
    return 0;
@@ -284,15 +317,22 @@ int main (int argc, char * argv[]){
    printf("\n\n\n");
 
    char * insert = "-i";
-   char * quick = "-q";   
+   char * quick = "-q";
 
-   int (*cmp_pointer)(void *, void *) = &strcmp;
+   int (*cmp_pointer)(void *, void *);
+   if(checkIfInt(array->token_list[0]->str)==0){ //not an int
+	cmp_pointer = &strcmp_token;
+   }
+   else{
+	convertArrayToInts();
+	cmp_pointer = &intcmp_token;
+   }
 
    if(strcmp(argv[1], insert) == 0){
       insertionSort((void*)&array, cmp_pointer);
    }
    else if (strcmp(argv[1], quick) == 0){
-      insertionSort((void*)&array, cmp_pointer);
+      quickSort((void*)&array, cmp_pointer);
    }
    else{
       printf("Non-valid sort input\n");
@@ -301,5 +341,3 @@ int main (int argc, char * argv[]){
    print_array();
    
 }
-
-
