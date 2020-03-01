@@ -221,10 +221,37 @@ int insertionSort(void* toSort, int (*comparator)(void*, void*)){
 }
 
 int quickSort(void* toSort, int (*comparator)(void*, void*)){
-
-
-
 }
+// swap token a and token b. we just swap the values, no change location in array
+void swap(token* a , token* b){
+ token temp = *b;
+ *a = *b;
+ *b = temp;
+}
+
+
+int partition(int low, int high, ,int (*comparator)(void*,void*)){
+ int pivot = array->token_list[high]->num;
+ int i = (low - 1);
+ int j;
+ for(j = low; j <= high - 1; j++){
+  if(array->token_list[j]->num < pivot){
+    i++;
+    swap(array->token_list[i], array->token_list[j]);
+  }
+ }
+ swap(array->token_list[i + 1], array->token_list[high]);
+ return i + 1;
+}
+
+int quickSortLegit(int low, int high,,int (*comparator)(void*, void*)){
+ if(comparator(high,low) > 0){
+   int pi = parition(low,high,comparator);
+   quickSortLegit(low, pi - 1, comparator);
+   quickSortLegit(pi + 1, high, comparator);
+ } 
+}
+ 
 void init(size_t size){
    array = malloc(sizeof(ArrayList));
    array->total_size = size;
@@ -269,28 +296,10 @@ int checkIfInt(char * t){
       return 1;
    }
    return 0;
-
 }
 
 int main (int argc, char * argv[]){
   init(100);
-      /*
-      int i;
-      for(i=0;i<1000;i++){
-      token *test = malloc(sizeof(token));
-      if(i%2==0){
-      test->str = "X";
-      }
-      else if(i%3==0){
-      test->str = "X";
-      }
-      else{
-      test->str = "X";
-      }	
-      add(test);
-      }   
-      print_array();
-      */
    if(argc!=3){
       //throw error, incorrect arguements
       printf("Incorrect arguements\n");
@@ -307,11 +316,6 @@ int main (int argc, char * argv[]){
    while(read(file,c,INT_MAX)>0){
    }
    strToArrayList(c);
-   //char *first = "abc";
-   //char *second = "xyz";
-   int a = 4;
-   int b =10;
-  // pnum(intcmp(&a,&b));
    
    print_array();
    printf("\n\n\n");
