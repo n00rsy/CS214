@@ -28,6 +28,7 @@ void convertArrayToInts(){
   for(i=0;i<array->current_size;i++){
     token * current = array->token_list[i];
     int a = atoi(current->str);
+    free(current->str);
     current->num = a;
   }
 }
@@ -193,9 +194,20 @@ void add(token *t){
          }
       }
       // this fixes junk files in the bieginning
+
+      for(i=0; i< array->total_size;i++){
+
+	if(array->is_num == 0 && array->current_size <=i){
+	  free(array->token_list[i]->str);
+	}
+	free(array->token_list[i]);
+      }
+      free(array->token_list);
       array->token_list = newList;
       array->total_size*=2;
      // FREE MEMORY OF OLD LIST
+      
+
    }
 
    array->token_list[array->current_size] = malloc(sizeof(token));
@@ -271,8 +283,10 @@ void init(size_t size){
 
 void end(){
    int i;
-   
    for(i = 0; i < array->total_size; i++){
+     if(array->is_num == 0 && i< array->current_size){
+	free(array->token_list[i]->str);
+     }
      free(array->token_list[i]);
    }
    free(array->token_list);
@@ -332,7 +346,7 @@ int main (int argc, char * argv[]){
    strToArrayList(c);
    
    // print_array();
-   printf("\n\n\n");
+  // printf("\n\n\n");
    free(c);
    char * insert = "-i";
    char * quick = "-q";
