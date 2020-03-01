@@ -330,8 +330,14 @@ int main (int argc, char * argv[]){
    }
    
    char *c = (char *) calloc(INT_MAX, sizeof(char));
+   c[0] = '%';
    while(read(file,c,INT_MAX)>0){
    }
+   if(c[0] == '%'){
+	end();
+	printf("empty file\n");
+	return 0;
+}
    strToArrayList(c);
    
    // print_array();
