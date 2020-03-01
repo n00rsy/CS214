@@ -54,7 +54,7 @@ int intcmp_token(void* a, void *b){
  int first = ((token * )a)->num;
  int second = ((token *)b)->num;
 
- printf("comparing: %d, %d\n", first, second);
+// printf("comparing: %d, %d\n", first, second);
  return first-second;
 }
 
@@ -62,7 +62,7 @@ int strcmp_token(void *first, void *second){
 
    char * f = ((token *)first)->str;
    char * s = ((token *)second)->str;
-   printf("comparing: %s, %s\n", f ,s);
+//   printf("comparing: %s, %s\n", f ,s);
    while (*f != '\0' && *s!= '\0'  && *f == *s) {
       f++;
       s++;
@@ -269,6 +269,17 @@ void init(size_t size){
    array->token_list = list_of_tokens;
 }
 
+void end(){
+   int i;
+   
+   for(i = 0; i < array->total_size; i++){
+     free(array->token_list[i]);
+   }
+   free(array->token_list);
+   free(array);
+
+}
+
 void print_array(){
    int i;
  // printf("%d\n", array->current_size);
@@ -322,7 +333,7 @@ int main (int argc, char * argv[]){
    
    // print_array();
    printf("\n\n\n");
-
+   free(c);
    char * insert = "-i";
    char * quick = "-q";
 
