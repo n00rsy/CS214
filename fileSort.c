@@ -210,7 +210,7 @@ void add(token *t){
 
    }
 
-   array->token_list[array->current_size] = malloc(sizeof(token));
+  // array->token_list[array->current_size] = malloc(sizeof(token));
    array->token_list[array->current_size] = t;
    array->current_size+=1;
 
@@ -273,7 +273,7 @@ void init(size_t size){
    array->current_size = 0;
    array->is_num = 0;
    // create a list of tokens
-   token** list_of_tokens = malloc(sizeof(token) * size);
+   token** list_of_tokens = malloc(sizeof(token)*size);
    int i; 
    for(i = 0; i < array->total_size; i++){
       list_of_tokens[i] = malloc(sizeof(token));
