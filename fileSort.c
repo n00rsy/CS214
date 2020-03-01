@@ -74,7 +74,8 @@ int strcmp_token(void *first, void *second){
 
 int insertionSort(void* toSort, int (*comparator)(void*, void*));
 int quickSort(void* toSort, int (*comparator)(void*, void*));
-
+int partition(int low, int high, int (*comparator)(void*,void*));
+int quickSortLegit(int low, int high,int (*comparator)(void*, void*));
 
 void pnum(int num){
    printf("%d\n",num);
@@ -221,21 +222,30 @@ int insertionSort(void* toSort, int (*comparator)(void*, void*)){
 }
 
 int quickSort(void* toSort, int (*comparator)(void*, void*)){
+ quickSortLegit(0,array->current_size - 1, comparator);
 }
-// swap token a and token b. we just swap the values, no change location in array
+// swap token a and token b. we just swap the values, 
 void swap(token* a , token* b){
- token temp = *b;
+//  printf("swapping: token a is %d, token b is %d\n", a->num, b->num);
+ token temp = *a;
  *a = *b;
  *b = temp;
+
 }
 
+int quickSortLegit(int low, int high,int (*comparator)(void*, void*)){
+ if(low < high){
+   int pi = partition(low,high,comparator);
+   quickSortLegit(low, pi - 1, comparator);
+   quickSortLegit(pi + 1, high, comparator);
+ } 
+}
 
-int partition(int low, int high, ,int (*comparator)(void*,void*)){
- int pivot = array->token_list[high]->num;
+int partition(int low, int high, int (*comparator)(void*,void*)){
  int i = (low - 1);
  int j;
  for(j = low; j <= high - 1; j++){
-  if(array->token_list[j]->num < pivot){
+  if(comparator(array->token_list[j] , array->token_list[high]) < 0){
     i++;
     swap(array->token_list[i], array->token_list[j]);
   }
@@ -244,13 +254,6 @@ int partition(int low, int high, ,int (*comparator)(void*,void*)){
  return i + 1;
 }
 
-int quickSortLegit(int low, int high,,int (*comparator)(void*, void*)){
- if(comparator(high,low) > 0){
-   int pi = parition(low,high,comparator);
-   quickSortLegit(low, pi - 1, comparator);
-   quickSortLegit(pi + 1, high, comparator);
- } 
-}
  
 void init(size_t size){
    array = malloc(sizeof(ArrayList));
@@ -317,7 +320,7 @@ int main (int argc, char * argv[]){
    }
    strToArrayList(c);
    
-   print_array();
+   // print_array();
    printf("\n\n\n");
 
    char * insert = "-i";
