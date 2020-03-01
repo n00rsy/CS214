@@ -185,13 +185,7 @@ void add(token *t){
       int i;
       for(i=0; i< array->total_size;i++){
          newList[i] = malloc(sizeof(token));
-         size_t strLen = strLength(array->token_list[i]->str);
-         newList[i]-> str = malloc(sizeof(char)*strLen+1);
-         newList[i]->str[strLen] = '\0';
-         char j;
-         for(j=0;array->token_list[i]->str[j] != '\0';++j){
-            newList[i]->str[j] = array->token_list[i]->str[j];
-         }
+         newList[i]->str = array->token_list[i]->str;
       }
       // this fixes junk files in the bieginning
 
@@ -205,9 +199,6 @@ void add(token *t){
       free(array->token_list);
       array->token_list = newList;
       array->total_size*=2;
-     // FREE MEMORY OF OLD LIST
-      
-
    }
 
   // array->token_list[array->current_size] = malloc(sizeof(token));
@@ -327,7 +318,7 @@ int checkIfInt(char * t){
 }
 
 int main (int argc, char * argv[]){
-  init(100);
+   init(100);
    if(argc!=3){
       //throw error, incorrect arguements
       printf("Incorrect arguements\n");
