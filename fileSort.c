@@ -265,10 +265,6 @@ void init(size_t size){
    array->is_num = 0;
    // create a list of tokens
    token** list_of_tokens = malloc(sizeof(token)*size);
-   int i; 
-   for(i = 0; i < array->total_size; i++){
-      list_of_tokens[i] = malloc(sizeof(token));
-   }
    array->token_list = list_of_tokens;
 }
 
