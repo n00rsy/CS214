@@ -177,10 +177,9 @@ void strToArrayList(char * s){
 
 void add(token *t){
    if(array->current_size >= array->total_size){
-      //make arrray bigger		
-      // should we worry about freeing memory of old list? - RA 
-      // pstr("COPYING");
-      // pnum(array->current_size);
+      token** old_list = array->token_list;
+      int total_size_old = array->total_size;
+
       token** newList = malloc(sizeof(token)*array->total_size*2);
       int i;
       for(i=0; i< array->total_size;i++){
@@ -196,6 +195,7 @@ void add(token *t){
       // this fixes junk files in the bieginning
       array->token_list = newList;
       array->total_size*=2;
+     // FREE MEMORY OF OLD LIST
    }
 
    array->token_list[array->current_size] = malloc(sizeof(token));
@@ -359,5 +359,6 @@ int main (int argc, char * argv[]){
       return 1;
    }
    print_array();
-   
+   close(file);
+   end(); 
 }
