@@ -1,7 +1,0 @@
-1. After our code successfully worked with a few basic test cases, we tested heavily to ensure our code ran with:
-	- Random witespace between words
-	- Large input
-2. We used online generators to give us lists of up to 10,000 random strings/ integers to sort with both insertion sort and quicksort.
-3. We manually added spaces, tabs, and newlines between tokens to test our input system.
-
-
