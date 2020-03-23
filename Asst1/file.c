@@ -31,12 +31,14 @@ int print_file(const char* file_name){
       return 0;
    } 
 
+   // what if text file is bigger
    char *buffer = (char*) calloc(1000, 100 *sizeof(char));
    while(read(file,buffer,1000) > 0);
    printf("%s",buffer);  
    free(buffer);
 }
 
+// TODO does not fix
 void write_file(const char *file_name, const char *outname){
    printf("copying %s into %s", file_name, outname);
    int file = open(file_name,O_RDONLY);
