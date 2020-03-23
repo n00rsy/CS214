@@ -38,12 +38,14 @@ int print_file(const char* file_name){
 }
 
 void write_file(const char *file_name, const char *outname){
+   printf("copying %s into %s", file_name, outname);
    int file = open(file_name,O_RDONLY);
    char buffer[1000];
    while(read(file,buffer,1000) > 0);
    int new_file = open(outname,O_WRONLY);
    write(new_file,buffer,1000); 
-   free(buffer);
+   close(file);
+   close(new_file);
 }
 
 void print_files_in_dir_recursive(const char *path){
@@ -58,8 +60,7 @@ void print_files_in_dir_recursive(const char *path){
          }
       } else {
          printf("file: %s:\n", dir->d_name);
-         const char* str = "test";
-         write_file(dir->d_name, strcat(str,dir->d_name));
+         write_file(dir->d_name,"test");
          // print_file(dir->d_name);
       }
    } 
