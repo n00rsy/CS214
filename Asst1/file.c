@@ -34,18 +34,20 @@ int print_file(const char* file_name){
    // what if text file is bigger
    char *buffer = (char*) calloc(1000, 100 *sizeof(char));
    while(read(file,buffer,1000) > 0);
-   printf("%s",buffer);  
+  // printf("%s",buffer);  
    free(buffer);
 }
 
 // TODO does not fix
 void write_file(const char *file_name, const char *outname){
-   printf("copying %s into %s", file_name, outname);
+  // printf("copying %s into %s", file_name, outname);
    int file = open(file_name,O_RDONLY);
-   char buffer[1000];
+   char buffer[1001];
+   int new_file = open(outname,O_WRONLY | O_CREAT | O_APPEND, 0666);
+   //printf("OUTNAME: %s\n", outname);
    while(read(file,buffer,1000) > 0);
-   int new_file = open(outname,O_WRONLY);
-   write(new_file,buffer,1000); 
+      write(new_file,buffer,1000); 
+    //  printf("BUFFER: %s\n", buffer);
    close(file);
    close(new_file);
 }
@@ -61,8 +63,8 @@ void print_files_in_dir_recursive(const char *path){
             print_files_in_dir_recursive(dir->d_name);
          }
       } else {
-         printf("file: %s:\n", dir->d_name);
-         write_file(dir->d_name,"test");
+    //     printf("file: %s:\n", dir->d_name);
+         write_file(dir->d_name,"./test_dir_1/test");
          // print_file(dir->d_name);
       }
    } 
