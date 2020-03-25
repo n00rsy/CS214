@@ -10,20 +10,19 @@
 const char* HOME = ".";
 const char* PARENT = "..";
 
-void print_files_in_dir_recursive(const char *path);
-int is_rec(const char *path);
-int print_file(const char* file_name);
-void write_file(const char *path, const char *outname);
+void print_files_in_dir_recursive( char *path);
+int is_rec( char *path);
+int print_file(char* file_name);
+void write_file(char *path, const char *outname);
 
-int is_rec(const char *path){
+int is_rec(char *path){
    if(strcmp(path,HOME) == 0 || strcmp(path,PARENT) == 0){ 
       return 0;
    }
    return 1;
-} 
+}
 
-
-int print_file(const char* file_name){
+int print_file( char* file_name){
    int file = open(file_name, O_RDONLY);
    if(file == -1){
       //throw error, file doesnt exist
@@ -39,7 +38,7 @@ int print_file(const char* file_name){
 }
 
 // TODO does not fix
-void write_file(const char *file_name, const char *outname){
+void write_file( char *file_name, const char *outname){
   // printf("copying %s into %s", file_name, outname);
    int file = open(file_name,O_RDONLY);
    char buffer[1001];
@@ -47,31 +46,69 @@ void write_file(const char *file_name, const char *outname){
    //printf("OUTNAME: %s\n", outname);
    while(read(file,buffer,1000) > 0);
       write(new_file,buffer,1000); 
-    //  printf("BUFFER: %s\n", buffer);
+     // printf("BUFFER: %s\n", buffer);
    close(file);
    close(new_file);
 }
 
-void print_files_in_dir_recursive(const char *path){
+char *my_strcpy(char *destination, char *source)
+{
+    char *start = destination;
+ 
+    while(*source != '\0')
+    {
+        *destination = *source;
+        destination++;
+        source++;
+    }
+ 
+    *destination = '\0'; // add '\0' at the end
+    return start;
+}
+
+void print_files_in_dir_recursive(char *path){
    DIR* d;
    d = opendir(path);
    struct dirent *dir;
    while((dir = readdir(d)) != NULL){
       if(dir->d_type == DT_DIR){
-         printf("directory: %s\n", dir->d_name);
+
          if(is_rec(dir->d_name)){
-            print_files_in_dir_recursive(dir->d_name);
+
+            printf("directory: %s\n", dir->d_name);
+	    
+	   char  fullPath[100];
+ 	   my_strcpy(fullPath, path);
+	   strcat(fullPath,"/");
+	   strcat(fullPath, dir->d_name);	   
+	
+            print_files_in_dir_recursive(fullPath);
          }
       } else {
-    //     printf("file: %s:\n", dir->d_name);
-         write_file(dir->d_name,"./test_dir_1/test");
-         // print_file(dir->d_name);
+         printf("file: %s:\n", dir->d_name);
+          // char* path = realpath(dir->d_name, );
+
+//	  if(path == NULL){
+  //           printf("cannot find file with name[%s]\n", path);
+
+           // printf("path[%s]\n", path);
+              
+	   char fullPath[100];
+ 	   my_strcpy(fullPath, path);
+	   strcat(fullPath,"/");
+	   strcat(fullPath,dir->d_name);
+	   strcat(fullPath, ".hcz");
+	   printf("%s\n",fullPath);
+         write_file(dir->d_name,fullPath);
+         print_file(dir->d_name);
       }
    } 
    closedir(d);
 } 
 
 int main(){
-   print_files_in_dir_recursive("."); 
+
+   char * path = realpath(".", NULL);
+   print_files_in_dir_recursive(path); 
 }
 
