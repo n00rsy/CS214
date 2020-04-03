@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "arraylist.h"
 
 // This constant can be avoided by explicitly
 // calculating height of Huffman Tree
 #define MAX_TREE_HT 100
-
 // A Huffman tree node
 struct MinHeapNode {
 
@@ -160,14 +161,21 @@ void buildMinHeap(struct MinHeap* minHeap)
 }
 
 // A utility function to print an array of size n
-void printArr(int arr[], int n)
+void printArr(int arr[], int n, int fd)
 {
     int i;
-    for (i = 0; i < n; ++i)
-        printf("%d", arr[i]);
+    for (i = 0; i < n; ++i){
+        int someInt = 368;
+        char str[12];
+        sprintf(str, "%d", arr[i]);
 
+        write(fd,str,1);
+        printf("%d", arr[i]);
+}
+    write(fd,"\n",1);
     printf("\n");
 }
+
 
 // Utility function to check if this node is leaf
 int isLeaf(struct MinHeapNode* root)
@@ -237,7 +245,7 @@ struct MinHeapNode* buildHuffmanTree(char **data, int * freq, int size)
 
 // Prints huffman codes from the root of Huffman Tree.
 // It uses arr[] to store codes
-void printCodes(struct MinHeapNode* root, int arr[], int top)
+void printCodes(struct MinHeapNode* root, int arr[], int top, int fd)
 
 {
 
@@ -245,14 +253,14 @@ void printCodes(struct MinHeapNode* root, int arr[], int top)
     if (root->left) {
 
         arr[top] = 0;
-        printCodes(root->left, arr, top + 1);
+        printCodes(root->left, arr, top + 1,fd);
     }
 
     // Assign 1 to right edge and recur
     if (root->right) {
 
         arr[top] = 1;
-        printCodes(root->right, arr, top + 1);
+        printCodes(root->right, arr, top + 1, fd);
     }
 
     // If this is a leaf node, then
@@ -262,7 +270,9 @@ void printCodes(struct MinHeapNode* root, int arr[], int top)
     if (isLeaf(root)) {
         //WRITE TO FILE CODE GOES HERE:
         printf("%s: ", root->data);
-        printArr(arr, top);
+        write(fd,root->data,strlen(root->data));
+        write(fd,"\t",1);
+        printArr(arr, top,fd);
     }
 }
 
@@ -280,7 +290,11 @@ void HuffmanCodes(char ** data, int * freq, int size)
     // the Huffman tree built above
     int arr[MAX_TREE_HT], top = 0;
 
-    printCodes(root, arr, top);
+    int codebook = open("HuffmanCodebook",O_WRONLY | O_CREAT, 0666);
+    write(codebook,"\\\n",2);
+    printCodes(root, arr, top,codebook);
+        write(codebook,"\n",1);
+    close(codebook);
 }
 
 
@@ -288,24 +302,25 @@ void HuffmanCodes(char ** data, int * freq, int size)
 // Driver program to test above functions
 int main()
 {
-    char arryee[6][10] = { "ass", "bitches", "cock", "dick", "error", "faded" };
 
+    //test code for arraylist
+    char arryee[6][15] = { "ass", "bitchesssss", "cock", "dick", "error", "faded" };
     int freq[] = { 5, 9, 12, 13, 16, 45 };
-
     ArrayList * array = init(5);
     int i;
     for(int i =0;i<6;i++){
         token *t = malloc(sizeof(token));
         t->str = arryee[i];
         t->num = freq[i];
-        printf("YERR: %d\n", t->num);
+        //printf("YERR: %d\n", t->num);
         add(array,t);
     }
     //print_array(array);
     char **test = arrayListStrings(array);
     int * test2 = arrayListInts(array);
+    //end of test code
 
-    printf("Input values:\n");
+
 
     /*
     correct output:

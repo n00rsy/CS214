@@ -105,7 +105,7 @@ int * arrayListInts(ArrayList * array){
    int i;
    for(int i = 0;i<array->current_size;i++){
 
-      printf("HLODKJLSDJK: %d\n", array->token_list[i]->num);
+      //printf("HLODKJLSDJK: %d\n", array->token_list[i]->num);
       nums[i] = array->token_list[i]->num;
    }
    return nums;
