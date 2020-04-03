@@ -11,7 +11,7 @@
 struct MinHeapNode {
 
     // One of the input characters
-    char data;
+    char * data;
 
     // Frequency of the character
     unsigned freq;
@@ -37,11 +37,9 @@ struct MinHeap {
 // A utility function allocate a new
 // min heap node with given character
 // and frequency of the character
-struct MinHeapNode* newNode(char data, unsigned freq)
+struct MinHeapNode* newNode(char * data, unsigned freq)
 {
-    struct MinHeapNode* temp
-        = (struct MinHeapNode*)malloc
-(sizeof(struct MinHeapNode));
+    struct MinHeapNode* temp = (struct MinHeapNode*)malloc(sizeof(struct MinHeapNode));
 
     temp->left = temp->right = NULL;
     temp->data = data;
@@ -183,7 +181,7 @@ int isLeaf(struct MinHeapNode* root)
 // equal to size and inserts all character of
 // data[] in min heap. Initially size of
 // min heap is equal to capacity
-struct MinHeap* createAndBuildMinHeap(char data[], int freq[], int size)
+struct MinHeap* createAndBuildMinHeap(char **data, int * freq, int size)
 
 {
 
@@ -199,7 +197,7 @@ struct MinHeap* createAndBuildMinHeap(char data[], int freq[], int size)
 }
 
 // The main function that builds Huffman tree
-struct MinHeapNode* buildHuffmanTree(char data[], int freq[], int size)
+struct MinHeapNode* buildHuffmanTree(char **data, int * freq, int size)
 
 {
     struct MinHeapNode *left, *right, *top;
@@ -224,7 +222,7 @@ struct MinHeapNode* buildHuffmanTree(char data[], int freq[], int size)
         // left and right children of this new node.
         // Add this node to the min heap
         // '$' is a special value for internal nodes, not used
-        top = newNode('$', left->freq + right->freq);
+        top = newNode("$", left->freq + right->freq);
 
         top->left = left;
         top->right = right;
@@ -262,8 +260,8 @@ void printCodes(struct MinHeapNode* root, int arr[], int top)
     // characters, print the character
     // and its code from arr[]
     if (isLeaf(root)) {
-
-        printf("%c: ", root->data);
+        //WRITE TO FILE CODE GOES HERE:
+        printf("%s: ", root->data);
         printArr(arr, top);
     }
 }
@@ -271,7 +269,7 @@ void printCodes(struct MinHeapNode* root, int arr[], int top)
 // The main function that builds a
 // Huffman Tree and print codes by traversing
 // the built Huffman Tree
-void HuffmanCodes(char data[], int freq[], int size)
+void HuffmanCodes(char ** data, int * freq, int size)
 
 {
     // Construct Huffman Tree
@@ -285,24 +283,30 @@ void HuffmanCodes(char data[], int freq[], int size)
     printCodes(root, arr, top);
 }
 
+
+
 // Driver program to test above functions
 int main()
 {
     char arryee[6][10] = { "ass", "bitches", "cock", "dick", "error", "faded" };
 
-    char arr[] = { 'a', 'b', 'c', 'd', 'e', 'f' };
     int freq[] = { 5, 9, 12, 13, 16, 45 };
 
-    ArrayList * array;
-    init(array, 10);
+    ArrayList * array = init(5);
     int i;
     for(int i =0;i<6;i++){
-    token *t = malloc(sizeof(token));
-    t->str = arryee[i];
-    t->num = freq[i];
-    //add(array,t);
+        token *t = malloc(sizeof(token));
+        t->str = arryee[i];
+        t->num = freq[i];
+        printf("YERR: %d\n", t->num);
+        add(array,t);
     }
     //print_array(array);
+    char **test = arrayListStrings(array);
+    int * test2 = arrayListInts(array);
+
+    printf("Input values:\n");
+
     /*
     correct output:
     f: 0
@@ -313,9 +317,9 @@ int main()
     e: 111
     */
 
-    int size = 6;
+    int size = array->current_size;
 
-    HuffmanCodes(arr, freq, size);
-
+    HuffmanCodes(test, test2, size);
+    end(array);
     return 0;
 }
