@@ -5,7 +5,7 @@
 
 #include "arraylist.h"
 
-#define INT_MAX 2147483647
+#define MAX_INT 2147483647
 
 // This constant can be avoided by explicitly
 // calculating height of Huffman Tree
@@ -332,7 +332,7 @@ void readCodebookFromFile(ArrayList * array, char * fileName){
       exit(1);
     }
 
-  char *c = (char *) calloc(INT_MAX, sizeof(char));
+  char *c = (char *) calloc(MAX_INT, sizeof(char));
   read(codebook,c, 2);
 if(c[0]!='\\'&&c[1]!='\n'){
     printf("error in codebook\n");
@@ -391,14 +391,16 @@ void buildHuffmanFromArrayList(ArrayList * array){
 }
 
 // Driver program to test above functions
+
+/*
 int main(){
 
     //test code for arraylist
     char arryee[6][15] = { "ass", "bitchesssss", "cock", "dick", "error", "faded" };
     int freq[] = { 5, 9, 12, 13, 16, 45 };
     ArrayList * array = init(5);
-    readCodebookFromFile(array);
-    print_array(array);
+    //readCodebookFromFile(array);
+    //print_array(array);
     /*
     int i;
     for(int i =0;i<6;i++){
@@ -422,7 +424,7 @@ int main(){
     a: 1100
     b: 1101
     e: 111
-    */
+    
 
     int size = array->current_size;
 
@@ -430,3 +432,4 @@ int main(){
     end(array);
     return 0;
 }
+*/

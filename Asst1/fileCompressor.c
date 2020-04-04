@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "arraylist.h"
+#include "huffman.h"
 
 const int RECURSIVE = 0;
 const int BUILDCODEBOOK = 1;

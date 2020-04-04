@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifndef ARRAYLIST_H
+#define ARRAYLIST_H
+
 typedef struct token_t {
    char* str;
    int num;
@@ -114,3 +117,5 @@ int * arrayListInts(ArrayList * array){
    }
    return nums;
 }
+
+#endif
