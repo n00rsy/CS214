@@ -14,8 +14,7 @@ void buildCodebook(int recursive){
 
 /*
 1. traverse files and build array
-2. build huffman tree
-3. output huffman codebook
+buildHuffmanFromArrayList(array);
 */
 
 }
@@ -23,7 +22,8 @@ void buildCodebook(int recursive){
 void compress(int recursive){
 
 /*
-1. input huffman codebook
+char * fileName = "HuffmanCodebook";
+readCodebookFromFile)(fileName);
 2. traverse files and output compression based on codebook
 */
 
@@ -32,7 +32,8 @@ void compress(int recursive){
 void decompress(int recursive){
 
   /*
-  1. input huffman codebook
+char * fileName = "HuffmanCodebook";
+readCodebookFromFile)(fileName);
   2. traverse files and output decompression based on codebook
   */
 
@@ -41,17 +42,12 @@ void decompress(int recursive){
 void (*methods[])(int) = {buildCodebook, compress, decompress};
 
 int main (int argc, char * argv[]){
-  //getting args
+  //evaluating args. I did this kind of wrong initially and now its way more complicated than it has to be. it works tho
   int i;
   int j;
 
   int flagValues[4] = {0,0,0,0};
-  char flags[4][3] = {
-                         "-R",
-                         "-b",
-                         "-c",
-                         "-d"
-                     };
+  const char flags[4][3] = {"-R","-b","-c","-d"};
   int numFlags = 0;
 
   for(i = 0; i<argc;i++){
@@ -67,7 +63,7 @@ int main (int argc, char * argv[]){
     printf("%s: %d\n", flags[i],flagValues[i]);
   }
 
-  if((flagValues[COMPRESS]+flagValues[DECOMPRESS]+flagValues[BUILDCODEBOOK])>1){
+  if((flagValues[COMPRESS]+flagValues[DECOMPRESS]+flagValues[BUILDCODEBOOK])!=1){
     printf("incorrect args\n");
     exit(1);
   }

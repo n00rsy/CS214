@@ -15,7 +15,10 @@ typedef struct ArrayList_t{
 } ArrayList;
 
 void pstr(char* str){
-   printf("'%s'\n",str);
+   printf("STRING: '%s'\t",str);
+}
+void pnum(int num){
+   printf("NUM: %d\n",num);
 }
 
 void print_array(ArrayList * array){
@@ -23,6 +26,7 @@ void print_array(ArrayList * array){
  // printf("%d\n", array->current_size);
    for(i = 0; i < array->current_size; i++){
          pstr(array->token_list[i]->str);
+         pnum(array->token_list[i]->num);
    }
 }
 

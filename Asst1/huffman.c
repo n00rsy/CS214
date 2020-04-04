@@ -5,6 +5,8 @@
 
 #include "arraylist.h"
 
+#define INT_MAX 2147483647
+
 // This constant can be avoided by explicitly
 // calculating height of Huffman Tree
 #define MAX_TREE_HT 100
@@ -56,7 +58,7 @@ struct MinHeap* createMinHeap(unsigned capacity)
 {
 
     struct MinHeap* minHeap
-        = (struct MinHeap*)malloc(sizeof(struct MinHeap));
+    = (struct MinHeap*)malloc(sizeof(struct MinHeap));
 
     // current size is 0
     minHeap->size = 0;
@@ -64,15 +66,15 @@ struct MinHeap* createMinHeap(unsigned capacity)
     minHeap->capacity = capacity;
 
     minHeap->array
-        = (struct MinHeapNode**)malloc(minHeap->
-capacity * sizeof(struct MinHeapNode*));
+    = (struct MinHeapNode**)malloc(minHeap->
+        capacity * sizeof(struct MinHeapNode*));
     return minHeap;
 }
 
 // A utility function to
 // swap two min heap nodes
 void swapMinHeapNode(struct MinHeapNode** a,
-                     struct MinHeapNode** b)
+   struct MinHeapNode** b)
 
 {
 
@@ -91,16 +93,16 @@ void minHeapify(struct MinHeap* minHeap, int idx)
     int right = 2 * idx + 2;
 
     if (left < minHeap->size && minHeap->array[left]->
-freq < minHeap->array[smallest]->freq)
+        freq < minHeap->array[smallest]->freq)
         smallest = left;
 
     if (right < minHeap->size && minHeap->array[right]->
-freq < minHeap->array[smallest]->freq)
+        freq < minHeap->array[smallest]->freq)
         smallest = right;
 
     if (smallest != idx) {
         swapMinHeapNode(&minHeap->array[smallest],
-                        &minHeap->array[idx]);
+            &minHeap->array[idx]);
         minHeapify(minHeap, smallest);
     }
 }
@@ -121,7 +123,7 @@ struct MinHeapNode* extractMin(struct MinHeap* minHeap)
 
     struct MinHeapNode* temp = minHeap->array[0];
     minHeap->array[0]
-        = minHeap->array[minHeap->size - 1];
+    = minHeap->array[minHeap->size - 1];
 
     --minHeap->size;
     minHeapify(minHeap, 0);
@@ -132,7 +134,7 @@ struct MinHeapNode* extractMin(struct MinHeap* minHeap)
 // A utility function to insert
 // a new node to Min Heap
 void insertMinHeap(struct MinHeap* minHeap,
-                   struct MinHeapNode* minHeapNode)
+ struct MinHeapNode* minHeapNode)
 
 {
 
@@ -171,7 +173,7 @@ void printArr(int arr[], int n, int fd)
 
         write(fd,str,1);
         printf("%d", arr[i]);
-}
+    }
     write(fd,"\n",1);
     printf("\n");
 }
@@ -284,7 +286,7 @@ void HuffmanCodes(char ** data, int * freq, int size)
 {
     // Construct Huffman Tree
     struct MinHeapNode* root
-        = buildHuffmanTree(data, freq, size);
+    = buildHuffmanTree(data, freq, size);
 
     // Print Huffman codes using
     // the Huffman tree built above
@@ -293,20 +295,111 @@ void HuffmanCodes(char ** data, int * freq, int size)
     int codebook = open("HuffmanCodebook",O_WRONLY | O_CREAT, 0666);
     write(codebook,"\\\n",2);
     printCodes(root, arr, top,codebook);
-        write(codebook,"\n",1);
+    write(codebook,"\n",1);
     close(codebook);
 }
 
+char *substring(char *string, int position, int length){
+   char *pointer;
+   int c;
 
+   pointer = malloc(length+1);
+
+   if (pointer == NULL)
+   {
+      printf("Unable to allocate memory.\n");
+      exit(1);
+  }
+
+  for (c = 0 ; c < length ; c++)
+  {
+      *(pointer+c) = *(string+position-1);      
+      string++;  
+  }
+
+  *(pointer+c) = '\0';
+
+  return pointer;
+}
+
+void readCodebookFromFile(ArrayList * array, char * fileName){
+    int codebook = open(fileName,O_RDONLY, 0666);
+    //handle missing file
+    if(codebook==-1){
+      //throw error, file doesnt exist
+      printf("File does not exist\n");
+      end(array);
+      exit(1);
+    }
+
+  char *c = (char *) calloc(INT_MAX, sizeof(char));
+  read(codebook,c, 2);
+if(c[0]!='\\'&&c[1]!='\n'){
+    printf("error in codebook\n");
+    end(array);
+    free(c);
+    exit(1);
+    }
+    c[0] = '%';
+    while(read(codebook,c,INT_MAX)>0){
+    }
+    if(c[0] == '%'){
+        printf("empty file\n");
+        end(array);
+        free(c);
+        exit(1);
+    }
+
+//printf("READ IN CODEBOOK:\n%s", c);
+
+//double pointer thing
+int p1 = 0;
+int p2 = 0;
+while(c[p2] != '\n'){
+  while(c[p2]!='\t'){
+     p2++;
+ }
+
+ char *str = substring( c, p1 + 1, p2 - p1);
+
+ p2++;
+ p1=p2;
+ while(c[p2]!='\n'){
+     p2++;
+ }
+ char *num = substring( c, p1 + 1, p2 - p1);
+ int number = atoi(num);
+
+ token *t = malloc(sizeof(token));
+ t->str = str;
+ t->num = number;
+ add(array,t);
+
+ p2++;
+ p1=p2;
+
+}
+
+}
+
+void buildHuffmanFromArrayList(ArrayList * array){
+    char **strings = arrayListStrings(array);
+    int * nums = arrayListInts(array);
+    int size = array->current_size;
+    HuffmanCodes(strings, nums, size);
+    end(array);
+}
 
 // Driver program to test above functions
-int main()
-{
+int main(){
 
     //test code for arraylist
     char arryee[6][15] = { "ass", "bitchesssss", "cock", "dick", "error", "faded" };
     int freq[] = { 5, 9, 12, 13, 16, 45 };
     ArrayList * array = init(5);
+    readCodebookFromFile(array);
+    print_array(array);
+    /*
     int i;
     for(int i =0;i<6;i++){
         token *t = malloc(sizeof(token));
@@ -315,12 +408,11 @@ int main()
         //printf("YERR: %d\n", t->num);
         add(array,t);
     }
+    */
     //print_array(array);
-    char **test = arrayListStrings(array);
-    int * test2 = arrayListInts(array);
+    //char **test = arrayListStrings(array);
+    //int * test2 = arrayListInts(array);
     //end of test code
-
-
 
     /*
     correct output:
@@ -334,7 +426,7 @@ int main()
 
     int size = array->current_size;
 
-    HuffmanCodes(test, test2, size);
+    //HuffmanCodes(test, test2, size);
     end(array);
     return 0;
 }
