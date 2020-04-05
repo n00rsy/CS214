@@ -4,8 +4,9 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "arraylist.h"
-#include "huffman.h"
+#include "include/arraylist.h"
+#include "include/huffman.h"
+#include "include/tokenize.h"
 
 const int RECURSIVE = 0;
 const int BUILDCODEBOOK = 1;

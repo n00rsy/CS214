@@ -30,7 +30,6 @@ void buildCodebookDriver(){
   buildCodebook(array, ".");
   print_array(array);
   buildHuffmanFromArrayList(array);
-
 }
 
 char *my_strcpy(char *destination, char *source)
@@ -98,16 +97,34 @@ void strToArrayList(char * s, ArrayList *array){
    int p2 = 0;
    while(s[p2] != '\0'){
       //scan token
-      while(s[p2] != ','&& s[p2] != '\0'&&  s[p2]!= ' ' && s[p2]!= ',' && s[p2]!= '\t' && s[p2]!= '\n' ){
+      while(s[p2] != '\0' && s[p2] != ' ' && s[p2]!= '\t' && s[p2]!= '\n' ){
          p2++;
       }
+      // add spaces, tabs, and newlines as tokens
+      token *t = malloc(sizeof(token));
+      switch(s[p2]){
+        case ' ':
+               t->str = ' ';
+               add(array,t);
+               break; 
+        case '\t':
+               t->str = '\t' 
+               add(array,t);
+               break; 
+        case '\n':
+               t->str = '\n' 
+               add(array,t);
+               break; 
+      } 
+
       //extract token and put in data structure
       char *str = substring( s, p1 + 1, p2 - p1);
+
       // printf("%s\n", str);
       token *t = malloc(sizeof(token));
       t->str = str;
       add(array,t);
-       while(s[p2] != ','&& s[p2] != '\0'){
+      while(s[p2] != ',' && s[p2] != '\0'){
          p2++;
       }
       //move past comma, whitespace then reset
@@ -141,4 +158,8 @@ char *substring(char *string, int position, int length){
    *(pointer+c) = '\0';
 
    return pointer;
+}
+
+int main(){
+ buildCodebookDriver();
 }
