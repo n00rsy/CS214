@@ -41,12 +41,26 @@ char newPath[200];
   strcat(newPath, ".hcz");
 int new_file = open(newPath,O_WRONLY | O_CREAT, 0666);
 
+int i;
+//for each token{
+for(i = 0;i<codebook->current_size;i++){
+ //if(strcmp(token,codebook->token_list[i]->str)==0){
+        char str[12];
+        sprintf(str, "%d", codebook->token_list[i]->num);
+        write(new_file, str, strlen(str)), 
+   }
+}
+
 /*
 1. extract tokens from giant string
 for each token:
   convert token w/ huffman
   write new token to .hcz 
 */
+
+close(file);
+close(new_file);
+
 }
 
 // TODO does not fix
