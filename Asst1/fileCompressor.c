@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "arraylist.h"
 #include "huffman.h"
@@ -12,19 +13,14 @@ const int COMPRESS = 2;
 const int DECOMPRESS = 3;
 
 void buildCodebook(int recursive){
-
-/*
-1. traverse files and build array
-buildHuffmanFromArrayList(array);
-*/
-
+ 
 }
 
 void compress(int recursive){
-
 /*
 char * fileName = "HuffmanCodebook";
 readCodebookFromFile)(fileName);
+replace each instance of token with code
 2. traverse files and output compression based on codebook
 */
 
@@ -35,6 +31,7 @@ void decompress(int recursive){
   /*
 char * fileName = "HuffmanCodebook";
 readCodebookFromFile)(fileName);
+   replace coded version with uncoded version
   2. traverse files and output decompression based on codebook
   */
 

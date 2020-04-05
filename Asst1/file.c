@@ -7,9 +7,9 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "arraylist.h"
+#include "include/arraylist.h"
 
-#define MAXIMUM 2147483647
+#define INT_MAX 2147483647
 
 const char* HOME = ".";
 const char* PARENT = "..";
@@ -21,7 +21,7 @@ int is_rec(char *path){
 return 1;
 }
 
-int compress_file( char* file_path, ArrayList * codebook){
+int compress_file(char* file_path, ArrayList *codebook){
  int file = open(file_path, O_RDONLY);
  if(file == -1){
       //throw error, file doesnt exist
@@ -48,8 +48,6 @@ for each token:
   write new token to .hcz 
 */
 }
-
-
 
 // TODO does not fix
 void write_file( char *file_path, const char *outname){
