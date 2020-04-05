@@ -18,6 +18,10 @@ void buildCodebook(int recursive){
 }
 
 void compress(int recursive){
+char * fileName = "HuffmanCodebook";
+      ArrayList * array = init(5);
+    readCodebookFromFile(array, fileName);
+
 /*
 char * fileName = "HuffmanCodebook";
 readCodebookFromFile)(fileName);
