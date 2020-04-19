@@ -10,10 +10,12 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <pthread.h>
 
 #define PORT "3491"  // the port users will be connecting to
 
 #define BACKLOG 10   // how many pending connections queue will hold
+int total_conns = 0;
 
 void sigchld_handler(int s)
 {
@@ -35,6 +37,37 @@ void *get_in_addr(struct sockaddr *sa)
 
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
+
+void* handle_client_connection(void* client_fd)  // client file descriptor
+{
+    int client_descriptor= *(int*) client_fd;
+
+    // keep handling the client in this thread
+    int success = send(client_descriptor, "dear client: you have your own thread!", 100, 0);
+    if(success < 0){
+      printf("error in sending client data\n");
+    }
+    int BUFFER_LEN = 100;
+    int num_bytes;
+
+    // handle incoming client data
+    while(1){
+      // buffer for data sent to us from client
+      char buffer[BUFFER_LEN];
+      int num_bytes;
+      if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN - 1, 0) < 0)){
+	printf("nothing from client, error");
+	continue;
+      } 
+    
+      buffer[BUFFER_LEN] = '\0';
+      printf("server: received %s\n", buffer);
+    }
+
+    return NULL;
+}
+
+
 
 int main(void)
 {
@@ -120,18 +153,15 @@ int main(void)
       continue;
     }
 
+    total_conns += 1;
     // inet_ntop converts the network address to a normal string for us to read
     inet_ntop(their_addr.ss_family,get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
     printf("server: got connection from %s\n", s);
-
-    if (!fork()) { // this is the child process
-      close(sockfd); // child doesn't need the listener
-      if (send(new_fd, "Hello, world!", 13, 0) == -1)
-	perror("send");
-      close(new_fd);
-      exit(0);
-    }
-    close(new_fd);  // parent doesn't need this
+    printf("total connections now: %d\n", total_conns);
+    send(new_fd, "Thank you for connecting. We are sending you to a new thread", 100, 0);
+    pthread_t client_thread;
+    pthread_create(&client_thread, NULL, handle_client_connection, (void*) &new_fd);
+    printf("created new thread for client\n");
   }
 
   return 0;

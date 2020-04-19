@@ -1,0 +1,6 @@
+- multi-threaeded server with mutex
+- send directories between servers and client 
+- thinkg about data structure to represent a repository
+
+future:
+
