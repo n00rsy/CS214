@@ -55,6 +55,7 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
       // buffer for data sent to us from client
       char buffer[BUFFER_LEN];
       int num_bytes;
+      size_t len;
       if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN - 1, 0) < 0)){
 	printf("nothing from client, error");
 	continue;
@@ -163,6 +164,5 @@ int main(void)
     pthread_create(&client_thread, NULL, handle_client_connection, (void*) &new_fd);
     printf("created new thread for client\n");
   }
-
   return 0;
 }
