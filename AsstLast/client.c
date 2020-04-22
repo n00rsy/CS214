@@ -1,4 +1,4 @@
-include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -13,6 +13,10 @@ include <stdio.h>
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
+// writes to .Configure file
+void configure(){
+  
+}
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -76,6 +80,7 @@ int main(int argc, char *argv[])
   while(1){
     if ((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) == -1) {
       perror("recv");
+      continue;
     } else {
       buf[numbytes] = '\0';
       printf("client: received from server '%s'\n",buf);

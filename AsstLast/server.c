@@ -5,12 +5,16 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <pthread.h>
+#include <fcntl.h>
+
 
 #define PORT "3491"  // the port users will be connecting to
 
@@ -23,7 +27,6 @@ void sigchld_handler(int s)
   int saved_errno = errno;
 
   while(waitpid(-1, NULL, WNOHANG) > 0);
-
   errno = saved_errno;
 }
 
@@ -37,10 +40,34 @@ void *get_in_addr(struct sockaddr *sa)
 
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
+// must be called from handle_client_connection
+void send_client_project(int client_fd, char* project_name){
+  // tar the project. output is result.tar.gz
+  char buffer[32];
+  sprintf(buffer, "tar -zcvf result.tar.gz %s", project_name);
+  printf("system call: %s\n", buffer);
+  system(buffer);
+  // now we have to send result.tar.gz to the client
+ int read_fd;
+ int write_fd;
+ struct stat stat_buf;
+ off_t offset = 0;
+
+ /* Open the input file. */
+ read_fd = open (project_name, O_RDONLY);
+ /* Stat the input file to obtain its size. */
+ fstat(read_fd, &stat_buf);
+ /* Blast the bytes from one file to the other. */
+ sendfile(client_fd, read_fd, &offset, stat_buf.st_size);
+ /* Close up. */
+ close (read_fd);
+  
+}
 
 void* handle_client_connection(void* client_fd)  // client file descriptor
 {
-    int client_descriptor= *(int*) client_fd;
+    
+    int client_descriptor = *(int*) client_fd;
 
     // keep handling the client in this thread
     int success = send(client_descriptor, "dear client: you have your own thread!", 100, 0);
@@ -49,17 +76,28 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
     }
     int BUFFER_LEN = 100;
     int num_bytes;
+    send_client_project(client_descriptor, "testproject");
 
-    // handle incoming client data
+    // handle incoming client requests
     while(1){
       // buffer for data sent to us from client
       char buffer[BUFFER_LEN];
       int num_bytes;
       size_t len;
+
+      //recieve commands from client from here
+      // commands should be stored in command.txt file with first line being command, and second lind being project name
       if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN - 1, 0) < 0)){
-	printf("nothing from client, error");
-	continue;
-      } 
+        if(strcmp(buffer,"checkout") == 0){
+          // if the user wants to check out a project name send them a project
+          // send_client_project(client_descriptor, buffer)
+        }
+        	printf("nothing from client, error");
+        	continue;
+      } else {
+	// end this thread + client connection
+	break;
+      }
     
       buffer[BUFFER_LEN] = '\0';
       printf("server: received %s\n", buffer);
@@ -164,5 +202,6 @@ int main(void)
     pthread_create(&client_thread, NULL, handle_client_connection, (void*) &new_fd);
     printf("created new thread for client\n");
   }
+
   return 0;
 }
