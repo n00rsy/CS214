@@ -17,7 +17,7 @@
 
 
 #define PORT "3491"  // the port users will be connecting to
-
+#define MAXDATASIZE 100 
 #define BACKLOG 10   // how many pending connections queue will hold
 int total_conns = 0;
 
@@ -40,6 +40,8 @@ void *get_in_addr(struct sockaddr *sa)
 
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
+
+
 // must be called from handle_client_connection
 void send_client_project(int client_fd, char* project_name){
   // tar the project. output is result.tar.gz
@@ -47,21 +49,24 @@ void send_client_project(int client_fd, char* project_name){
   sprintf(buffer, "tar -zcvf result.tar.gz %s", project_name);
   printf("system call: %s\n", buffer);
   system(buffer);
-  // now we have to send result.tar.gz to the client
- int read_fd;
- int write_fd;
- struct stat stat_buf;
- off_t offset = 0;
 
- /* Open the input file. */
- read_fd = open (project_name, O_RDONLY);
- /* Stat the input file to obtain its size. */
- fstat(read_fd, &stat_buf);
- /* Blast the bytes from one file to the other. */
- sendfile(client_fd, read_fd, &offset, stat_buf.st_size);
- /* Close up. */
- close (read_fd);
-  
+ // now lets read result.tar.gz so we can send it to client
+
+ int fd = open("result.tar.gz", O_RDONLY);
+
+ if(fd < 0){
+  perror("couldnt open tar file");
+ }
+
+ // get length of file
+ off_t fsize;
+ fsize = lseek(fd,0,SEEK_END);
+ printf("file len of tar: %ld", fsize);
+
+ // send client length of file
+ char msg_len[10];
+ sprintf(msg_len,"tarlen:%ld",fsize);
+ send(client_fd,msg_len,10,0);
 }
 
 void* handle_client_connection(void* client_fd)  // client file descriptor
@@ -77,30 +82,24 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
     int BUFFER_LEN = 100;
     int num_bytes;
     send_client_project(client_descriptor, "testproject");
-
     // handle incoming client requests
     while(1){
       // buffer for data sent to us from client
+      printf("client loop\n");
       char buffer[BUFFER_LEN];
       int num_bytes;
       size_t len;
 
       //recieve commands from client from here
       // commands should be stored in command.txt file with first line being command, and second lind being project name
-      if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN - 1, 0) < 0)){
-        if(strcmp(buffer,"checkout") == 0){
-          // if the user wants to check out a project name send them a project
-          // send_client_project(client_descriptor, buffer)
-        }
-        	printf("nothing from client, error");
-        	continue;
-      } else {
-	// end this thread + client connection
-	break;
-      }
+      if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN, 0) != -1)){
+	if(strcmp(buffer,"checkout") == 0){
+	  printf("server: received %s\n", buffer);
+	} else {
+	  printf("server: nope %s\n", buffer);
+	}
+      } 
     
-      buffer[BUFFER_LEN] = '\0';
-      printf("server: received %s\n", buffer);
     }
 
     return NULL;

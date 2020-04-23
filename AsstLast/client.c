@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 
 #define PORT "3491" // the port client will be connecting to 
 
@@ -73,25 +74,23 @@ int main(int argc, char *argv[])
 
   inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
   printf("client: connecting to %s\n", s);
-
   freeaddrinfo(servinfo); // all done with this structure
-
+  // this is the command that the client wants to do ( add, remove, checkout )
+  char *cmd = "checkout";
+  // send the server the command we want
+  send(sockfd,cmd,strlen(cmd),0);
   // client loop
   while(1){
-    if ((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) == -1) {
-      perror("recv");
-      continue;
-    } else {
+    // keep reading from server until nothing else to be read
+    if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
       buf[numbytes] = '\0';
-      printf("client: received from server '%s'\n",buf);
+      printf("received from server");
+   } 
+      // char text[10];
+      // printf("Please enter some text to send to the server");
+      // scanf("%s",text);
+      // send(sockfd, text, 10,0);
 
-      char text[10];
-      printf("Please enter some text to send to the server");
-      scanf("%s",text);
-
-      send(sockfd, text, 10,0);
-
-    }
   }
   close(sockfd);
   return 0;
