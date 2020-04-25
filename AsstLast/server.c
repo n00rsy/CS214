@@ -163,6 +163,6 @@ int main(void)
     pthread_t client_thread;
     pthread_create(&client_thread, NULL, handle_client_connection, (void*) &new_fd);
     printf("created new thread for client\n");
-  }
+ } 
   return 0;
 }

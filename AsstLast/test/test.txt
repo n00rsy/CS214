@@ -1,4 +1,7 @@
-#include <stdio.h>
+asdfjklasdfkjlasdfkaskdfkjaskfksajfjksadkfkjsdkjfkjasdkfkjasdjkfksadkfksadfsajdkkjsaj
+
+
+doiong sdoojsadjjj#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -66,10 +69,8 @@ void freeManifest(manifestStruct * man){
 }
 
 char * hash(char * filePath){
-   // printf("hashing %s\n", filePath);
-   // char c[MD5_DIGEST_LENGTH];
-    char * cOut = malloc((50)*sizeof(char));
-     unsigned char c[MD5_DIGEST_LENGTH];
+    char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
+    c[MD5_DIGEST_LENGTH] = '\0';
   int i;
   int inFile = open (filePath, O_RDONLY);
   MD5_CTX mdContext;
@@ -86,35 +87,15 @@ char * hash(char * filePath){
     MD5_Update (&mdContext, data, bytes);
   }
   MD5_Final (c,&mdContext);
-  for(i = 0; i < MD5_DIGEST_LENGTH; i++){
-//	 printf("%02x", c[i]);
-	if(i==0){
-	sprintf(cOut,"%02x", c[i]);
-	}
-	else{
-	sprintf(cOut+strlen(cOut),"%02x", c[i]);
-	}
-  }
- // cOut[MD5_DIGEST_LENGTH] = '\0';
-//  printf("\n\n FINAL HASH: %s\n", cOut);
+  for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
+  printf (" %s\n", filePath);
   close (inFile);
-  return cOut;
+  return c;
 }
 
 //parses line in format <version num> \t <path/name> \t <hash> \t
 fileNode * parseLine(char * line){
   fileNode * fNode = malloc(sizeof(fileNode));
-
-  int count = 0;
-char *ptr = line;
-while((ptr = strchr(ptr, '\t')) != NULL) {
-    count++;
-    ptr++;
-}
-if(count!=3){
-  printf("Found corrupted line in manifest: %s\n", line);
-  return NULL;
-}
 
   char * token = strtok(line, "\t");
   fNode->versionNum = atoi(token);
@@ -208,7 +189,6 @@ int manifestFD = open(manifestPath,O_RDWR);
         *p2='\0';
         //printf("Parsing %s\n", p1);
         fileNode * new = parseLine(p1);
-        if(new!=NULL){
         //insert new node at end of llist
         if(man->head ==NULL){
           man->head = new;
@@ -220,7 +200,6 @@ int manifestFD = open(manifestPath,O_RDWR);
           }
           last->next = new;
         }
-      }
         *p2='\n';
           p2++;
           break;
@@ -266,22 +245,14 @@ int writeManifest(manifestStruct * man, char * manifestPath){
 }
 
 
-fileNode * createFileNodeFromPath(char * projectName, char * filePath){
-  
-  char * fullPath = malloc(sizeof(char)*(strlen(projectName)+strlen(filePath)+5));
-  strcpy(fullPath, projectName);
-  strcat(fullPath, "/");
-  strcat(fullPath, filePath);
-  
+fileNode * createFileNodeFromPath(char * filePath){
   fileNode * fNode = malloc(sizeof(fileNode));
   if(fNode ==NULL){
     return NULL;
   }
   fNode->versionNum = 1;
   fNode->filePath = filePath;
-  fNode->hash =hash(fullPath);
-  free(fullPath);
-  return fNode;
+  fNode->hash = hash(filePath);
 }
 
 int addFile(char * projectName, char * filePath){
@@ -296,12 +267,14 @@ int addFile(char * projectName, char * filePath){
   char * manifestPath = (char *)malloc(1000*sizeof(char));
   strcpy(manifestPath, projectName);
   strcat(manifestPath, "/.Manifest");
+  
    //check if file is already in .Manifest
   manifestStruct * man = readManifest(manifestPath);
   if(man ==NULL){
     printf("Unable to open manifest or corrupted manifest\n");
     return 0;
   }
+
   //add node to end of llist
   fileNode * ptr = man->head;
   fileNode * last;
@@ -315,7 +288,7 @@ int addFile(char * projectName, char * filePath){
     }
     ptr=ptr->next;
   }
-  last->next = createFileNodeFromPath(projectName,filePath);
+  last->next = createFileNodeFromPath(filePath);
 
   printf("Printing manifest\n");
   printManifest(man);
@@ -336,6 +309,7 @@ int removeFile(char * projectName, char * filePath){
   char * manifestPath = (char *)malloc(1000*sizeof(char));
   strcpy(manifestPath, projectName);
   strcat(manifestPath, "/.Manifest");
+  
    //check if file is already in .Manifest
   manifestStruct * man = readManifest(manifestPath);
   if(man ==NULL){
@@ -382,8 +356,8 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 
-  addFile("test", "test.txt");
- hash("test/test.txt");
+  addFile("test", "test/file.txt");
+  
   int sockfd, numbytes;  
   char buf[MAXDATASIZE];
   struct addrinfo hints, *servinfo, *p;
@@ -450,4 +424,5 @@ int main(int argc, char *argv[])
   close(sockfd);
   return 0;
 }
+:wq!
 
