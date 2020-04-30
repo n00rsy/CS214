@@ -1,4 +1,7 @@
-#include <stdio.h>
+asdfjklasdfkjlasdfkaskdfkjaskfksajfjksadkfkjsdkjfkjasdkfkjasdjkfksadkfksadfsajdkkjsaj
+
+
+doiong sdoojsadjjj#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -16,31 +19,21 @@
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
-// writes to .Configure file
-void configure(){
-  
-}
-
 const int buffer_size = 100;
 
 typedef struct file_node {
-   char versionNum;
+   int versionNum;
    char* filePath;
    char *hash;//prob change this data type
 
    struct file_node * next;
 } fileNode;
 
-typedef struct dotfile_struct {
+typedef struct manifest_struct {
    int versionNum;
    fileNode * head;
 
 } manifestStruct;
-
-void printFileNode(fileNode * fNode){
-printf("File version num: %d\tpath: '%s'\thash: '%s'\n",
-    fNode->versionNum, fNode->filePath, fNode->hash);
-}
 
 void printManifest(manifestStruct * man){
   printf("Manifest Version Number: %d\n\n", man->versionNum);
@@ -52,16 +45,11 @@ void printManifest(manifestStruct * man){
   }
 
   while(ptr!=NULL){
-    printFileNode(ptr);
+    printf("File version num: %d\tpath: '%s'\thash: '%s'\n",
+    ptr->versionNum, ptr->filePath, ptr->hash);
     ptr=ptr->next;
   }
 
-}
-
-void freeFileNode(fileNode * fNode){
-  //free(fNode ->filePath);
-  //free(fNode->hash);
-  free(fNode);
 }
 
 void freeManifest(manifestStruct * man){
@@ -71,16 +59,17 @@ void freeManifest(manifestStruct * man){
   while(ptr!=NULL){
     prev = ptr;
     ptr=ptr->next;
-    freeFileNode(prev);
+    free(prev->filePath);
+    free(prev->hash);
+    free(prev);
   }
-  freeFileNode(ptr);
+  free(ptr->filePath);
+  free(ptr->hash);
+  free(ptr);
 }
 
-
 char * hash(char * filePath){
-  /*
     char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
-    
     c[MD5_DIGEST_LENGTH] = '\0';
   int i;
   int inFile = open (filePath, O_RDONLY);
@@ -101,56 +90,12 @@ char * hash(char * filePath){
   for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
   printf (" %s\n", filePath);
   close (inFile);
-  if(strcmp(c, "")==0){
-    c = "<empty file>";
-  }
   return c;
-  */
-
-  char * ye = malloc(10*sizeof(char));
-  ye= "ye";
-  return ye;
-}
-
-char * getManifestPath(char * projectName){
-  int mainfestPathLen = strlen(projectName)+12;
-  char * manifestPath = (char *)malloc(mainfestPathLen*sizeof(char));
-  strcpy(manifestPath, projectName);
-  strcat(manifestPath, "/.Manifest");
-  return manifestPath;
-}
-
-char * getUpdatePath(char * projectName){
-  int mainfestPathLen = strlen(projectName)+12;
-  char * manifestPath = (char *)malloc(mainfestPathLen*sizeof(char));
-  strcpy(manifestPath, projectName);
-  strcat(manifestPath, "/.Update");
-  return manifestPath;
-}
-
-char * getConflictPath(char * projectName){
-  int mainfestPathLen = strlen(projectName)+12;
-  char * manifestPath = (char *)malloc(mainfestPathLen*sizeof(char));
-  strcpy(manifestPath, projectName);
-  strcat(manifestPath, "/.Conflict");
-  return manifestPath;
 }
 
 //parses line in format <version num> \t <path/name> \t <hash> \t
 fileNode * parseLine(char * line){
   fileNode * fNode = malloc(sizeof(fileNode));
-
-  int count = 0;
-char *ptr = line;
-while((ptr = strchr(ptr, '\t')) != NULL) {
-    count++;
-    ptr++;
-}
-
-if(count!=3){
-  printf("Found corrupted line in manifest: %s\n", line);
-  return NULL;
-}
 
   char * token = strtok(line, "\t");
   fNode->versionNum = atoi(token);
@@ -169,9 +114,6 @@ if(count!=3){
   //printf("hash: %s\n\n", fNode->hash);
   return fNode;
 }
-
-
-
 
 //returns pointer to struct containing llist of files
 manifestStruct * readManifest(char * manifestPath){
@@ -247,7 +189,6 @@ int manifestFD = open(manifestPath,O_RDWR);
         *p2='\0';
         //printf("Parsing %s\n", p1);
         fileNode * new = parseLine(p1);
-        if(new!=NULL){
         //insert new node at end of llist
         if(man->head ==NULL){
           man->head = new;
@@ -259,7 +200,6 @@ int manifestFD = open(manifestPath,O_RDWR);
           }
           last->next = new;
         }
-      }
         *p2='\n';
           p2++;
           break;
@@ -304,92 +244,38 @@ int writeManifest(manifestStruct * man, char * manifestPath){
   close(manifest);
 }
 
-int writeConflict(fileNode * fNode, char * projectName){
 
-}
-
-int writeUpdate(fileNode * fNode, char * projectName){
-  
-}
-
-fileNode * createFileNodeFromPath(char * projectName, char * filePath){
-  
-  char * fullPath = malloc(sizeof(char)*(strlen(projectName)+strlen(filePath)+5));
-  strcpy(fullPath, projectName);
-  strcat(fullPath, "/");
-  strcat(fullPath, filePath);
-  
+fileNode * createFileNodeFromPath(char * filePath){
   fileNode * fNode = malloc(sizeof(fileNode));
   if(fNode ==NULL){
     return NULL;
   }
   fNode->versionNum = 1;
   fNode->filePath = filePath;
-  fNode->hash = hash(fullPath);
-  fNode->next = NULL;
-  free(fullPath);
-  return fNode;
+  fNode->hash = hash(filePath);
 }
 
-
 int addFile(char * projectName, char * filePath){
- //check if project exists on client side
+ //check if project exists.
  DIR* d;
  d = opendir(projectName);
  if(d==NULL){
    printf("Project does not exist.\n");
    return 0;
  }
-
-  char * manifestPath =getManifestPath(projectName);
+  int mainfestPathLen = strlen(projectName)+12;
+  char * manifestPath = (char *)malloc(1000*sizeof(char));
+  strcpy(manifestPath, projectName);
+  strcat(manifestPath, "/.Manifest");
+  
+   //check if file is already in .Manifest
   manifestStruct * man = readManifest(manifestPath);
-
   if(man ==NULL){
     printf("Unable to open manifest or corrupted manifest\n");
     return 0;
   }
-  printManifest(man);
-  printf("\n\n");
-  //add node to llist w/ alphabetical sort
 
-  fileNode * new = createFileNodeFromPath(projectName,filePath);
-  //printFileNode(new);
-  if(new == NULL){
-    printf("Error detected. Unable to add file.\n");
-    free(manifestPath);
-    freeFileNode(new);
-    return 0;
-  }
-  fileNode * ptr = man->head;
-  fileNode * prev;
-
-  if(strcmp(new->filePath, ptr->filePath)==0){
-      printf("File %s %s already in Manifest.\n", new->filePath, ptr->filePath);
-      free(manifestPath);
-      freeFileNode(new);
-      return 0;
-  }
-
-  if(ptr==NULL || strcmp(new->filePath, ptr->filePath)<=0){
-    new->next = man->head;
-    man->head = new;
-  }
-  else{
-    while(ptr->next!=NULL && strcmp(new->filePath, ptr->filePath)>0){
-      ptr = ptr->next;
-    }
-      if(strcmp(new->filePath, ptr->filePath)==0){
-        printf("File %s already in Manifest.\n", filePath);
-        free(manifestPath);
-        freeFileNode(new);
-        return 0;
-  }
-
-
-    new->next = ptr->next;
-    ptr->next = new;
-  }
-  /*
+  //add node to end of llist
   fileNode * ptr = man->head;
   fileNode * last;
   while(ptr!=NULL){
@@ -402,8 +288,9 @@ int addFile(char * projectName, char * filePath){
     }
     ptr=ptr->next;
   }
-  last->next = createFileNodeFromPath(projectName,filePath);
-  */
+  last->next = createFileNodeFromPath(filePath);
+
+  printf("Printing manifest\n");
   printManifest(man);
   writeManifest(man,manifestPath);
   free(manifestPath);
@@ -411,17 +298,20 @@ int addFile(char * projectName, char * filePath){
 }
 
 int removeFile(char * projectName, char * filePath){
- //check if project exists on client side
+ //check if project exists.
  DIR* d;
  d = opendir(projectName);
  if(d==NULL){
    printf("Project does not exist.\n");
    return 0;
  }
+  int mainfestPathLen = strlen(projectName)+12;
+  char * manifestPath = (char *)malloc(1000*sizeof(char));
+  strcpy(manifestPath, projectName);
+  strcat(manifestPath, "/.Manifest");
   
-  char * manifestPath = getManifestPath(projectName);
+   //check if file is already in .Manifest
   manifestStruct * man = readManifest(manifestPath);
-
   if(man ==NULL){
     printf("Unable to open manifest or corrupted manifest\n");
     return 0;
@@ -447,136 +337,12 @@ int removeFile(char * projectName, char * filePath){
   prev->next = ptr->next; 
   free(ptr);
 
-  //printManifest(man);
+  printManifest(man);
   writeManifest(man,manifestPath);
   free(manifestPath);
   return 1;
 }
 
-int update(char * projectName){
-//check if project exists on server
-//check if client can communicate with server
- DIR* d;
- d = opendir(projectName);
- if(d==NULL){
-   printf("Project does not exist.\n");
-   return 0;
- }
-  
-  char * manifestPath = getManifestPath(projectName);
-  manifestStruct * clientManifest = readManifest(manifestPath);
-
-  if(clientManifest ==NULL){
-    printf("Unable to open manifest or corrupted manifest\n");
-    return 0;
-  }
-  //get manifest from server
-  manifestStruct * serverManifest = readManifest("serverTest/.Manifest");
-
-  //full success case
-  if(serverManifest->versionNum == clientManifest->versionNum){
-    //write blank .Update and end
-    char * updatePath = getUpdatePath(projectName);
-    int update = open(updatePath,O_WRONLY | O_CREAT | O_APPEND |O_TRUNC, 0666);
-    free(updatePath);
-    close(update);
-    return 1;
-  }
-  //compare .Manifest content
-  fileNode * clientPtr = clientManifest->head;
-  fileNode * serverPtr = serverManifest->head;
-
-  char * conflictPath = getConflictPath(projectName);
-  char * updatePath = getUpdatePath(projectName);
-
-  while(clientPtr!=NULL){
-    int found = 0;
-    char * liveHash = hash(clientPtr->filePath);
-    while(serverPtr!=NULL){
-      if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
-        found = 1;
-        //conflict
-        if(strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
-           strcmp(liveHash,clientPtr->hash)!=0){
-          printf("C %s %s", clientPtr->filePath, liveHash);
-          continue;
-        }
-        //modify code
-        if(clientPtr->versionNum!=serverPtr->versionNum &&
-           strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
-           strcmp(clientPtr->hash, liveHash)==0){
-
-        }
-      }
-      serverPtr = serverPtr->next;
-    }
-    //delete code
-    if(found == 0){
-
-    }
-
-    serverPtr = serverManifest->head;
-    clientPtr=clientPtr->next;
-    free(liveHash);
-  }
-
-//bad initial design. have to do second pass for add code
-clientPtr = clientManifest->head;
-serverPtr = serverManifest->head;
-
-while(serverPtr!=NULL){
-  int found = 0;
-  while(clientPtr!=NULL){
-    if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
-        found = 1;
-      }
-
-    clientPtr=clientPtr->next;
-  }
-  //add code
-  if(found ==0){
-
-  }
-  clientPtr = clientManifest->head;
-  serverPtr = serverPtr->next;
-}
-
-
-free(updatePath);
-free(conflictPath);
-free(manifestPath);
-}
-
-
-// basically git pull
-int upgrade(char * projectName){
-  //check if server can be contacted
-  //check if project exists on server
-
-  char * updatePath = getUpdatePath(projectName);
-  int update = open(updatePath, O_RDONLY);
-  if(update <0){
-    printf("Need to run update or no updates\n");
-    free(updatePath);
-    return 0;
-  }
-  char * conflictPath = getConflictPath(projectName);
-  int conflict = open(conflictPath, O_RDONLY);
-  if(conflict >0){
-    printf("Conficts exist. Cannot update.\n");
-    free(updatePath);
-    free(conflictPath);
-    close(conflict);
-    return 0;
-  }
-
-  //do upgrades 
-
-  
-  close(update);
-  free(updatePath);
-  free(conflictPath);
-}
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -590,8 +356,8 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 
-  addFile("test", "test.txt");
-  hash("test/test.txt");
+  addFile("test", "test/file.txt");
+  
   int sockfd, numbytes;  
   char buf[MAXDATASIZE];
   struct addrinfo hints, *servinfo, *p;
@@ -636,25 +402,27 @@ int main(int argc, char *argv[])
 
   inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
   printf("client: connecting to %s\n", s);
-  freeaddrinfo(servinfo); // all done with this structure
-  // this is the command that the client wants to do ( add, remove, checkout )
-  char *cmd = "checkout:projectname";
-  // send the server the command we want
-  send(sockfd,cmd,strlen(cmd),0);
-  // wait to recieve the response.
-  if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
-    // copy buf into buffercpy
-    char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
-    strcpy(buffercpy,buf);
-    char *tokenptr;
-    tokenptr = strtok(buffercpy, ":");
-    while(tokenptr != NULL){
-      printf("client: %s\n", tokenptr);
-      tokenptr = strtok(NULL, ":");
-    }
-  } 
 
+  freeaddrinfo(servinfo); // all done with this structure
+
+  // client loop
+  while(1){
+    if ((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) == -1) {
+      perror("recv");
+    } else {
+      buf[numbytes] = '\0';
+      printf("client: received from server '%s'\n",buf);
+
+      char text[10];
+      printf("Please enter some text to send to the server");
+      scanf("%s",text);
+
+      send(sockfd, text, 10,0);
+
+    }
+  }
   close(sockfd);
   return 0;
 }
+:wq!
 

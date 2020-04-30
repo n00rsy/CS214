@@ -47,26 +47,27 @@ void send_client_project(int client_fd, char* project_name){
   // tar the project. output is result.tar.gz
   char buffer[32];
   sprintf(buffer, "tar -zcvf result.tar.gz %s", project_name);
-  printf("system call: %s\n", buffer);
   system(buffer);
 
  // now lets read result.tar.gz so we can send it to client
+ int project_descriptor = open("result.tar.gz", O_RDONLY);
 
- int fd = open("result.tar.gz", O_RDONLY);
-
- if(fd < 0){
+ if(project_descriptor < 0){
   perror("couldnt open tar file");
  }
 
  // get length of file
  off_t fsize;
- fsize = lseek(fd,0,SEEK_END);
- printf("file len of tar: %ld", fsize);
+ fsize = lseek(project_descriptor,0,SEEK_END);
+ printf("file len of tar: %ld\n", fsize);
 
  // send client length of file
  char msg_len[10];
  sprintf(msg_len,"tarlen:%ld",fsize);
+ printf("thingf is %s\n", msg_len);
  send(client_fd,msg_len,10,0);
+ sendfile(project_descriptor, client_fd, NULL,fsize);
+ 
 }
 
 void* handle_client_connection(void* client_fd)  // client file descriptor
@@ -75,37 +76,38 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
     int client_descriptor = *(int*) client_fd;
 
     // keep handling the client in this thread
-    int success = send(client_descriptor, "dear client: you have your own thread!", 100, 0);
-    if(success < 0){
-      printf("error in sending client data\n");
-    }
     int BUFFER_LEN = 100;
     int num_bytes;
-    send_client_project(client_descriptor, "testproject");
     // handle incoming client requests
     while(1){
       // buffer for data sent to us from client
-      printf("client loop\n");
       char buffer[BUFFER_LEN];
       int num_bytes;
       size_t len;
-
       //recieve commands from client from here
-      // commands should be stored in command.txt file with first line being command, and second lind being project name
       if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN, 0) != -1)){
-	if(strcmp(buffer,"checkout") == 0){
-	  printf("server: received %s\n", buffer);
-	} else {
-	  printf("server: nope %s\n", buffer);
+	// the client will send something like checkout:projectname so we will seperate it.
+	// copy the data recieved from client into a new array to tokenize 
+	char *buffercpy= malloc(sizeof(char) * BUFFER_LEN);
+	strcpy(buffercpy,buffer);
+	
+	char *tokenptr;
+	tokenptr = strtok(buffercpy, ":");
+	while(tokenptr != NULL){
+	  if(strcmp(tokenptr,"checkout") == 0){
+		// clients to checkout. lets do it
+	    tokenptr = strtok(NULL, ":");
+	    printf("server: sending client the project -> %s \n", tokenptr);
+	    send_client_project(client_descriptor, "testproject");
+	    free(buffercpy);
+	    break;
+	  }
 	}
       } 
-    
     }
 
     return NULL;
 }
-
-
 
 int main(void)
 {
@@ -196,10 +198,8 @@ int main(void)
     inet_ntop(their_addr.ss_family,get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
     printf("server: got connection from %s\n", s);
     printf("total connections now: %d\n", total_conns);
-    send(new_fd, "Thank you for connecting. We are sending you to a new thread", 100, 0);
     pthread_t client_thread;
     pthread_create(&client_thread, NULL, handle_client_connection, (void*) &new_fd);
-    printf("created new thread for client\n");
   }
 
   return 0;

@@ -4,6 +4,6 @@ make:
 server:
 	gcc server.c -pthread -o s
 client:
-	gcc client.c -pthread -o c
+	gcc client.c -lssl -lcrypto -pthread -o c
 hash:
-	gcc -g -Wall -o file file.c -lssl -lcrypto
+	gcc -g -Wall -o hash hash.c -lssl -lcrypto
