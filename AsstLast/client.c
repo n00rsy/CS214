@@ -18,28 +18,28 @@
 
 // writes to .Configure file
 void configure(){
-  
+
 }
 
 const int buffer_size = 100;
 
 typedef struct file_node {
-   char versionNum;
-   char* filePath;
-   char *hash;//prob change this data type
+  char versionNum;
+  char* filePath;
+  char *hash;//prob change this data type
 
-   struct file_node * next;
+  struct file_node * next;
 } fileNode;
 
 typedef struct dotfile_struct {
-   int versionNum;
-   fileNode * head;
+  int versionNum;
+  fileNode * head;
 
 } manifestStruct;
 
 void printFileNode(fileNode * fNode){
-printf("File version num: %d\tpath: '%s'\thash: '%s'\n",
-    fNode->versionNum, fNode->filePath, fNode->hash);
+  printf("File version num: %d\tpath: '%s'\thash: '%s'\n",
+      fNode->versionNum, fNode->filePath, fNode->hash);
 }
 
 void printManifest(manifestStruct * man){
@@ -79,33 +79,33 @@ void freeManifest(manifestStruct * man){
 
 char * hash(char * filePath){
   /*
-    char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
-    
-    c[MD5_DIGEST_LENGTH] = '\0';
-  int i;
-  int inFile = open (filePath, O_RDONLY);
-  MD5_CTX mdContext;
-  int bytes;
-  unsigned char data[1024];
+     char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
 
-  if (inFile <0) {
-    printf ("%s can't be opened.\n", filePath);
-    return NULL;
-  }
+     c[MD5_DIGEST_LENGTH] = '\0';
+     int i;
+     int inFile = open (filePath, O_RDONLY);
+     MD5_CTX mdContext;
+     int bytes;
+     unsigned char data[1024];
 
-  MD5_Init (&mdContext);
-  while (bytes = read (inFile,data,1023)){
-    MD5_Update (&mdContext, data, bytes);
-  }
-  MD5_Final (c,&mdContext);
-  for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
-  printf (" %s\n", filePath);
-  close (inFile);
-  if(strcmp(c, "")==0){
-    c = "<empty file>";
-  }
-  return c;
-  */
+     if (inFile <0) {
+     printf ("%s can't be opened.\n", filePath);
+     return NULL;
+     }
+
+     MD5_Init (&mdContext);
+     while (bytes = read (inFile,data,1023)){
+     MD5_Update (&mdContext, data, bytes);
+     }
+     MD5_Final (c,&mdContext);
+     for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
+     printf (" %s\n", filePath);
+     close (inFile);
+     if(strcmp(c, "")==0){
+     c = "<empty file>";
+     }
+     return c;
+   */
 
   char * ye = malloc(10*sizeof(char));
   ye= "ye";
@@ -141,16 +141,16 @@ fileNode * parseLine(char * line){
   fileNode * fNode = malloc(sizeof(fileNode));
 
   int count = 0;
-char *ptr = line;
-while((ptr = strchr(ptr, '\t')) != NULL) {
+  char *ptr = line;
+  while((ptr = strchr(ptr, '\t')) != NULL) {
     count++;
     ptr++;
-}
+  }
 
-if(count!=3){
-  printf("Found corrupted line in manifest: %s\n", line);
-  return NULL;
-}
+  if(count!=3){
+    printf("Found corrupted line in manifest: %s\n", line);
+    return NULL;
+  }
 
   char * token = strtok(line, "\t");
   fNode->versionNum = atoi(token);
@@ -176,10 +176,10 @@ if(count!=3){
 //returns pointer to struct containing llist of files
 manifestStruct * readManifest(char * manifestPath){
 
-int manifestFD = open(manifestPath,O_RDWR);
+  int manifestFD = open(manifestPath,O_RDWR);
   if(manifestFD<0){
-   printf(".Manifest not found\n");
-   return NULL;
+    printf(".Manifest not found\n");
+    return NULL;
   }
 
   manifestStruct * man = malloc(sizeof(manifestStruct));
@@ -198,21 +198,21 @@ int manifestFD = open(manifestPath,O_RDWR);
     if(count ==0){
       char * p = &buffer[0];
       while(*p!='\n'){
-        if(*p=='\0'){
-          printf("Manifest formatted incorrectly.\n");
-          free(man);
-          return NULL;
-        }
-        p++;
+	if(*p=='\0'){
+	  printf("Manifest formatted incorrectly.\n");
+	  free(man);
+	  return NULL;
+	}
+	p++;
       }
       *p='\0';
       man->versionNum = atoi(buffer);
       int i = 0;
       p++;
       while(*p!='\0'){
-        buffer[i] = *p;
-        p++;
-        i++;
+	buffer[i] = *p;
+	p++;
+	i++;
       }
       buffer[i] = '\0';
 
@@ -224,45 +224,45 @@ int manifestFD = open(manifestPath,O_RDWR);
     char * p2 = &fullBuffer[0];
     char * p1;
     int shouldbreak = 0;
-    
+
     while(*p2!='\0'){
       p1=p2;
       while(*p2!='\n' && *p2!='\0'){
-        p2++;
+	p2++;
       }
 
       int i;
       switch(*p2){
-        case '\0':
-          i=0;
-          while(*p1!='\0'){
-            fullBuffer[i] = *p1;
-            i++;
-            p1++;
-          }
-          fullBuffer[i] = '\0';
-          //printf("\n\nleftover buffer: '%s'\t%c\n", fullBuffer, *(p2-1));
-          break;
-        case '\n':
-        *p2='\0';
-        //printf("Parsing %s\n", p1);
-        fileNode * new = parseLine(p1);
-        if(new!=NULL){
-        //insert new node at end of llist
-        if(man->head ==NULL){
-          man->head = new;
-        }
-        else{
-          fileNode * last = man->head;
-          while(last->next !=NULL){
-            last = last->next;
-          }
-          last->next = new;
-        }
-      }
-        *p2='\n';
-          p2++;
-          break;
+	case '\0':
+	  i=0;
+	  while(*p1!='\0'){
+	    fullBuffer[i] = *p1;
+	    i++;
+	    p1++;
+	  }
+	  fullBuffer[i] = '\0';
+	  //printf("\n\nleftover buffer: '%s'\t%c\n", fullBuffer, *(p2-1));
+	  break;
+	case '\n':
+	  *p2='\0';
+	  //printf("Parsing %s\n", p1);
+	  fileNode * new = parseLine(p1);
+	  if(new!=NULL){
+	    //insert new node at end of llist
+	    if(man->head ==NULL){
+	      man->head = new;
+	    }
+	    else{
+	      fileNode * last = man->head;
+	      while(last->next !=NULL){
+		last = last->next;
+	      }
+	      last->next = new;
+	    }
+	  }
+	  *p2='\n';
+	  p2++;
+	  break;
       }
     }
   }
@@ -309,16 +309,16 @@ int writeConflict(fileNode * fNode, char * projectName){
 }
 
 int writeUpdate(fileNode * fNode, char * projectName){
-  
+
 }
 
 fileNode * createFileNodeFromPath(char * projectName, char * filePath){
-  
+
   char * fullPath = malloc(sizeof(char)*(strlen(projectName)+strlen(filePath)+5));
   strcpy(fullPath, projectName);
   strcat(fullPath, "/");
   strcat(fullPath, filePath);
-  
+
   fileNode * fNode = malloc(sizeof(fileNode));
   if(fNode ==NULL){
     return NULL;
@@ -333,13 +333,13 @@ fileNode * createFileNodeFromPath(char * projectName, char * filePath){
 
 
 int addFile(char * projectName, char * filePath){
- //check if project exists on client side
- DIR* d;
- d = opendir(projectName);
- if(d==NULL){
-   printf("Project does not exist.\n");
-   return 0;
- }
+  //check if project exists on client side
+  DIR* d;
+  d = opendir(projectName);
+  if(d==NULL){
+    printf("Project does not exist.\n");
+    return 0;
+  }
 
   char * manifestPath =getManifestPath(projectName);
   manifestStruct * man = readManifest(manifestPath);
@@ -364,10 +364,10 @@ int addFile(char * projectName, char * filePath){
   fileNode * prev;
 
   if(strcmp(new->filePath, ptr->filePath)==0){
-      printf("File %s %s already in Manifest.\n", new->filePath, ptr->filePath);
-      free(manifestPath);
-      freeFileNode(new);
-      return 0;
+    printf("File %s %s already in Manifest.\n", new->filePath, ptr->filePath);
+    free(manifestPath);
+    freeFileNode(new);
+    return 0;
   }
 
   if(ptr==NULL || strcmp(new->filePath, ptr->filePath)<=0){
@@ -378,32 +378,31 @@ int addFile(char * projectName, char * filePath){
     while(ptr->next!=NULL && strcmp(new->filePath, ptr->filePath)>0){
       ptr = ptr->next;
     }
-      if(strcmp(new->filePath, ptr->filePath)==0){
-        printf("File %s already in Manifest.\n", filePath);
-        free(manifestPath);
-        freeFileNode(new);
-        return 0;
-  }
-
+    if(strcmp(new->filePath, ptr->filePath)==0){
+      printf("File %s already in Manifest.\n", filePath);
+      free(manifestPath);
+      freeFileNode(new);
+      return 0;
+    }
 
     new->next = ptr->next;
     ptr->next = new;
   }
   /*
-  fileNode * ptr = man->head;
-  fileNode * last;
-  while(ptr!=NULL){
-    if(strcmp(filePath, ptr->filePath)==0){
-      printf("File %s already in Manifest.\n", filePath);
-      return 0;
-    }
-    if(ptr->next ==NULL){
-      last = ptr;
-    }
-    ptr=ptr->next;
-  }
-  last->next = createFileNodeFromPath(projectName,filePath);
-  */
+     fileNode * ptr = man->head;
+     fileNode * last;
+     while(ptr!=NULL){
+     if(strcmp(filePath, ptr->filePath)==0){
+     printf("File %s already in Manifest.\n", filePath);
+     return 0;
+     }
+     if(ptr->next ==NULL){
+     last = ptr;
+     }
+     ptr=ptr->next;
+     }
+     last->next = createFileNodeFromPath(projectName,filePath);
+   */
   printManifest(man);
   writeManifest(man,manifestPath);
   free(manifestPath);
@@ -411,14 +410,14 @@ int addFile(char * projectName, char * filePath){
 }
 
 int removeFile(char * projectName, char * filePath){
- //check if project exists on client side
- DIR* d;
- d = opendir(projectName);
- if(d==NULL){
-   printf("Project does not exist.\n");
-   return 0;
- }
-  
+  //check if project exists on client side
+  DIR* d;
+  d = opendir(projectName);
+  if(d==NULL){
+    printf("Project does not exist.\n");
+    return 0;
+  }
+
   char * manifestPath = getManifestPath(projectName);
   manifestStruct * man = readManifest(manifestPath);
 
@@ -430,7 +429,7 @@ int removeFile(char * projectName, char * filePath){
   //remove node from llist
   fileNode * ptr = man->head;
   fileNode * prev;
-  
+
   if(ptr !=NULL && strcmp(ptr->filePath, filePath)==0){
     man->head = ptr->next;
     free(ptr);
@@ -454,15 +453,15 @@ int removeFile(char * projectName, char * filePath){
 }
 
 int update(char * projectName){
-//check if project exists on server
-//check if client can communicate with server
- DIR* d;
- d = opendir(projectName);
- if(d==NULL){
-   printf("Project does not exist.\n");
-   return 0;
- }
-  
+  //check if project exists on server
+  //check if client can communicate with server
+  DIR* d;
+  d = opendir(projectName);
+  if(d==NULL){
+    printf("Project does not exist.\n");
+    return 0;
+  }
+
   char * manifestPath = getManifestPath(projectName);
   manifestStruct * clientManifest = readManifest(manifestPath);
 
@@ -494,19 +493,19 @@ int update(char * projectName){
     char * liveHash = hash(clientPtr->filePath);
     while(serverPtr!=NULL){
       if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
-        found = 1;
-        //conflict
-        if(strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
-           strcmp(liveHash,clientPtr->hash)!=0){
-          printf("C %s %s", clientPtr->filePath, liveHash);
-          continue;
-        }
-        //modify code
-        if(clientPtr->versionNum!=serverPtr->versionNum &&
-           strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
-           strcmp(clientPtr->hash, liveHash)==0){
+	found = 1;
+	//conflict
+	if(strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
+	    strcmp(liveHash,clientPtr->hash)!=0){
+	  printf("C %s %s", clientPtr->filePath, liveHash);
+	  continue;
+	}
+	//modify code
+	if(clientPtr->versionNum!=serverPtr->versionNum &&
+	    strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
+	    strcmp(clientPtr->hash, liveHash)==0){
 
-        }
+	}
       }
       serverPtr = serverPtr->next;
     }
@@ -520,31 +519,31 @@ int update(char * projectName){
     free(liveHash);
   }
 
-//bad initial design. have to do second pass for add code
-clientPtr = clientManifest->head;
-serverPtr = serverManifest->head;
+  //bad initial design. have to do second pass for add code
+  clientPtr = clientManifest->head;
+  serverPtr = serverManifest->head;
 
-while(serverPtr!=NULL){
-  int found = 0;
-  while(clientPtr!=NULL){
-    if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
-        found = 1;
+  while(serverPtr!=NULL){
+    int found = 0;
+    while(clientPtr!=NULL){
+      if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
+	found = 1;
       }
 
-    clientPtr=clientPtr->next;
+      clientPtr=clientPtr->next;
+    }
+    //add code
+    if(found ==0){
+
+    }
+    clientPtr = clientManifest->head;
+    serverPtr = serverPtr->next;
   }
-  //add code
-  if(found ==0){
-
-  }
-  clientPtr = clientManifest->head;
-  serverPtr = serverPtr->next;
-}
 
 
-free(updatePath);
-free(conflictPath);
-free(manifestPath);
+  free(updatePath);
+  free(conflictPath);
+  free(manifestPath);
 }
 
 
@@ -572,7 +571,7 @@ int upgrade(char * projectName){
 
   //do upgrades 
 
-  
+
   close(update);
   free(updatePath);
   free(conflictPath);
@@ -590,8 +589,8 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 
-  addFile("test", "test.txt");
-  hash("test/test.txt");
+  // addFile("test", "test.txt");
+  // hash("test/test.txt");
   int sockfd, numbytes;  
   char buf[MAXDATASIZE];
   struct addrinfo hints, *servinfo, *p;
@@ -648,10 +647,14 @@ int main(int argc, char *argv[])
     strcpy(buffercpy,buf);
     char *tokenptr;
     tokenptr = strtok(buffercpy, ":");
-    while(tokenptr != NULL){
-      printf("client: %s\n", tokenptr);
-      tokenptr = strtok(NULL, ":");
-    }
+    tokenptr = strtok(NULL, ":");
+    printf("client: %s\n", tokenptr);
+    // file data goes here
+    off_t file_size = atoi(tokenptr);
+    int finalfd = open("client.tar.gz",O_CREAT,0644);
+    char *file_buffer = (char*) malloc(sizeof(char) * file_size);
+    recv(sockfd, file_buffer, file_size, 0);
+    write(finalfd, file_buffer,file_size);
   } 
 
   close(sockfd);

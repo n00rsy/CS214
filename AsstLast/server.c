@@ -41,7 +41,6 @@ void *get_in_addr(struct sockaddr *sa)
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-
 // must be called from handle_client_connection
 void send_client_project(int client_fd, char* project_name){
   // tar the project. output is result.tar.gz
@@ -49,64 +48,80 @@ void send_client_project(int client_fd, char* project_name){
   sprintf(buffer, "tar -zcvf result.tar.gz %s", project_name);
   system(buffer);
 
- // now lets read result.tar.gz so we can send it to client
- int project_descriptor = open("result.tar.gz", O_RDONLY);
+  // now lets read result.tar.gz so we can send it to client
+  int project_descriptor = open("result.tar.gz", O_RDONLY);
 
- if(project_descriptor < 0){
-  perror("couldnt open tar file");
- }
+  if(project_descriptor < 0){
+    perror("couldnt open tar file");
+  }
 
- // get length of file
- off_t fsize;
- fsize = lseek(project_descriptor,0,SEEK_END);
- printf("file len of tar: %ld\n", fsize);
+  // get length of file
+  off_t fsize;
+  fsize = lseek(project_descriptor,0,SEEK_END);
+  // printf("file len of tar: %ld\n", fsize);
 
- // send client length of file
- char msg_len[10];
- sprintf(msg_len,"tarlen:%ld",fsize);
- printf("thingf is %s\n", msg_len);
- send(client_fd,msg_len,10,0);
- sendfile(project_descriptor, client_fd, NULL,fsize);
- 
+  // send client length of file
+  char msg_len[10];
+  sprintf(msg_len,"tarlen:%ld",fsize);
+  send(client_fd,msg_len,10,0);
+
+  char projbuffer[fsize];
+  int bytes_read = read(project_descriptor,projbuffer, fsize);
+  if(bytes_read < 0){
+    perror(strerror(errno));
+  }
+  printf("sending the client the project\n");
+  send(client_fd,projbuffer,fsize,0);
+ // void *p = projbuffer;
+ // while(bytes_read > 0){
+ //   int bytes_written = send(client_fd,p,bytes_read, 0); 
+ //   if (bytes_written <= 0) {
+ //     perror(strerror(errno));
+ //   }
+ //   bytes_read -= bytes_written;
+ //   p += bytes_written;
+ // }
+//
 }
+
 
 void* handle_client_connection(void* client_fd)  // client file descriptor
 {
-    
-    int client_descriptor = *(int*) client_fd;
 
-    // keep handling the client in this thread
-    int BUFFER_LEN = 100;
+  int client_descriptor = *(int*) client_fd;
+
+  // keep handling the client in this thread
+  int BUFFER_LEN = 100;
+  int num_bytes;
+  // handle incoming client requests
+  while(1){
+    // buffer for data sent to us from client
+    char buffer[BUFFER_LEN];
     int num_bytes;
-    // handle incoming client requests
-    while(1){
-      // buffer for data sent to us from client
-      char buffer[BUFFER_LEN];
-      int num_bytes;
-      size_t len;
-      //recieve commands from client from here
-      if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN, 0) != -1)){
-	// the client will send something like checkout:projectname so we will seperate it.
-	// copy the data recieved from client into a new array to tokenize 
-	char *buffercpy= malloc(sizeof(char) * BUFFER_LEN);
-	strcpy(buffercpy,buffer);
-	
-	char *tokenptr;
-	tokenptr = strtok(buffercpy, ":");
-	while(tokenptr != NULL){
-	  if(strcmp(tokenptr,"checkout") == 0){
-		// clients to checkout. lets do it
-	    tokenptr = strtok(NULL, ":");
-	    printf("server: sending client the project -> %s \n", tokenptr);
-	    send_client_project(client_descriptor, "testproject");
-	    free(buffercpy);
-	    break;
-	  }
-	}
-      } 
-    }
+    size_t len;
+    //recieve commands from client from here
+    if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN, 0) != -1)){
+      // the client will send something like checkout:projectname so we will seperate it.
+      // copy the data recieved from client into a new array to tokenize 
+      char *buffercpy= malloc(sizeof(char) * BUFFER_LEN);
+      strcpy(buffercpy,buffer);
 
-    return NULL;
+      char *tokenptr;
+      tokenptr = strtok(buffercpy, ":");
+      while(tokenptr != NULL){
+	if(strcmp(tokenptr,"checkout") == 0){
+	  // clients to checkout. lets do it
+	  tokenptr = strtok(NULL, ":");
+	  printf("server: sending client the project -> %s \n", tokenptr);
+	  send_client_project(client_descriptor, "testproject");
+	  free(buffercpy);
+	  break;
+	}
+      }
+    } 
+  }
+
+  return NULL;
 }
 
 int main(void)
@@ -124,7 +139,7 @@ int main(void)
   struct sigaction sa;
 
   int yes = 1;
-  
+
   char s[INET6_ADDRSTRLEN];
 
   int rv;
