@@ -49,7 +49,7 @@ void send_client_project(int client_fd, char* project_name){
   system(buffer);
 
   // now lets read result.tar.gz so we can send it to client
-  int project_descriptor = open("servertest.txt", O_RDONLY);
+  int project_descriptor = open("result.tar.gz", O_RDONLY);
 
   if(project_descriptor < 0){
     perror("couldnt open tar file");
@@ -80,20 +80,7 @@ void send_client_project(int client_fd, char* project_name){
   } else {
     printf("server: sent client %d bytes\n", bytes_written);
   }
-
-  char *p = projbuffer;
-  // while(bytes_read > 0){
-  //    int bytes_written = send(client_fd,p,bytes_read, 0); 
-  //    if (bytes_written <= 0) {
-  //      perror(strerror(errno));
-  //    } else {
-  //      printf("server: sent client %d bytes\n", bytes_written);
-  //    }
-  //    bytes_read -= bytes_written;
-  //    p += bytes_written;
-  //  }
-  //
-  }
+}
 
 
   void* handle_client_connection(void* client_fd)  // client file descriptor

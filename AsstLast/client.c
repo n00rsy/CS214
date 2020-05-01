@@ -650,18 +650,12 @@ int main(int argc, char *argv[])
     char *file_buffer = (char*) malloc(sizeof(char) * file_size);
     int bytes_recv = read(sockfd,file_buffer, file_size);
     printf("client: bytes recieved from server %d\n", bytes_recv);
+
     // write the bytes into a file
-    int finalfd = open("client_test.txt",O_CREAT | O_RDWR ,0666);
+    int finalfd = open("client.tar.gz", O_CREAT | O_RDWR ,0666);
     int writtenbytes = write(finalfd,file_buffer,file_size);
     perror(strerror(errno));
     printf("client: bytes written to file %d\n", writtenbytes);
-    printf("client: printng the buffer: %s\n", file_buffer);
-    // file data goes here
-   // off_t file_size = atoi(tokenptr);
-   // int finalfd = open("client.tar.gz",O_CREAT,0644);
-   // char *file_buffer = (char*) malloc(sizeof(char) * file_size);
-   // recv(sockfd, file_buffer, file_size, 0);
-   // write(finalfd, file_buffer,file_size);
   } 
   close(sockfd);
 }
