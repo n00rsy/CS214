@@ -17,8 +17,25 @@
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
 // writes to .Configure file
-void configure(){
+void configure(char* host, char* port){
+  if( access(".configure", F_OK ) != -1 ) {
+    printf("found .configure, rewriting it!\n");
+  } else {
+    printf("creating .configure file\n");
+  }
 
+  // create configure file
+  int configure_fd = open(".configure", O_CREAT | O_RDWR ,0666);
+
+  int len = strlen(host) + strlen(port) + 1;
+  char config_buf[len];
+  sprintf(config_buf, "%s:%s",host,port);
+  int writtenbytes = write(configure_fd,config_buf,len);
+  if(writtenbytes <= 0){
+   printf("failed to create a configure file");
+  } else {
+    printf("wrote %d bytes to configure file\n", writtenbytes);
+  }
 }
 
 const int buffer_size = 100;
@@ -583,8 +600,36 @@ void *get_in_addr(struct sockaddr *sa)
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+// is there .configure file?
+
+int doesConfigureExist(){
+  if(access(".configure", F_OK ) != -1 ) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 int main(int argc, char *argv[])
 {
+
+  if (argc < 2) {
+    fprintf(stderr,"not enough arguments usage => ./WTF `command` \n");
+    exit(1);
+  }
+
+  char *op = argv[1]; 
+  if(strcmp(op,"configure") == 0){
+    if(argc < 4){
+	printf("not enough arguments usage => ./WTF configure `hostname` `port` \n");
+	return 1;
+    }
+    char *host = argv[2];
+    char *port = argv[3];
+
+    configure(host,port);
+    return 1;
+  } 
 
   // addFile("test", "test.txt");
   // hash("test/test.txt");
@@ -594,16 +639,36 @@ int main(int argc, char *argv[])
   int rv;
   char s[INET6_ADDRSTRLEN];
 
-  if (argc != 2) {
-    fprintf(stderr,"usage: client hostname\n");
-    exit(1);
-  }
 
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
+  // open configure file
+  int configure_fd = open(".configure", O_RDONLY,0666);
 
-  if ((rv = getaddrinfo(argv[1], PORT, &hints, &servinfo)) != 0) {
+  off_t fsize;
+  fsize = lseek(configure_fd,0,SEEK_END);
+  lseek(configure_fd,0,0);
+  char config_buff[fsize];
+  int bytes_read = read(configure_fd, config_buff, fsize);
+  if(bytes_read <= 0){
+    printf("error in reading configure file\n");
+    return 1;
+  }
+  char *hostname; 
+  char *port;
+  //read buffer to get hostname and port
+  char * curLine = config_buff;
+  int cnt = 0;
+  printf("config buff : %s\n", config_buff);
+
+  char *configptr;
+  configptr = strtok(config_buff, ":");
+  hostname = configptr;
+  configptr = strtok(NULL, ":");
+  port = configptr;
+  // ok now we got host and port from .config
+  if ((rv = getaddrinfo(hostname, port , &hints, &servinfo)) != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
     return 1;
   }
@@ -630,35 +695,70 @@ int main(int argc, char *argv[])
     return 2;
   }
 
+
   inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
   printf("client: connecting to %s\n", s);
   freeaddrinfo(servinfo); // all done with this structure
-  // this is the command that the client wants to do ( add, remove, checkout )
-  char *cmd = "checkout:projectname";
-  // send the server the command we want
-  send(sockfd,cmd,strlen(cmd),0);
-  // wait to recieve the response.
-  if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
-    // copy buf into buffercpy
-    char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
-    strcpy(buffercpy,buf);
-    char *tokenptr;
-    tokenptr = strtok(buffercpy, ":");
-    tokenptr = strtok(NULL, ":");
-    printf("client: %s\n", tokenptr);
-    off_t file_size = atoi(tokenptr);
-    char *file_buffer = (char*) malloc(sizeof(char) * file_size);
-    int bytes_recv = read(sockfd,file_buffer, file_size);
-    printf("client: bytes recieved from server %d\n", bytes_recv);
 
-    // write the bytes into a file
-    int finalfd = open("client.tar.gz", O_CREAT | O_RDWR ,0666);
-    int writtenbytes = write(finalfd,file_buffer,file_size);
-    perror(strerror(errno));
-    printf("client: bytes written to file %d\n", writtenbytes);
+
+  // parse command
+  if(strcmp(op,"checkout") == 0){
+    if(doesConfigureExist() == 0){
+      printf("No .configure file found. Please run configure\n");
+      return 1;
+    }
+    if(argc < 3){
+      printf("no project name given usage -> ./WTF checkout `projectname`");
+      return 1;
+    }
+    // send client cmd and project name in the following format checkout:projectname
+    char *projname = argv[2];
+    printf("getting %s from server...\n", projname);
+    char checkout_buff[strlen("checkout") + strlen(projname)];
+    sprintf(checkout_buff,"checkout:%s",projname);
+    // now the cmd string is ready, lets send it to the server to get our projetc
+    send(sockfd,checkout_buff,strlen(checkout_buff),0);
+
+    // server response, file parsing and untarring done here
+    if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
+      // copy buf into buffercpy
+      char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
+      strcpy(buffercpy,buf);
+      char *tokenptr;
+      tokenptr = strtok(buffercpy, ":");
+      tokenptr = strtok(NULL, ":");
+      printf("client: project length in bytes is %s \n", tokenptr);
+      off_t file_size = atoi(tokenptr);
+      char *file_buffer = (char*) malloc(sizeof(char) * file_size);
+      int bytes_recv = read(sockfd,file_buffer, file_size);
+      printf("client: bytes recieved from server %d\n", bytes_recv);
+
+      // write the bytes into a file
+      char *untar = "tar -zxvf client.tar.gz";
+      int finalfd = open("client.tar.gz", O_CREAT | O_RDWR ,0666);
+      int writtenbytes = write(finalfd,file_buffer,file_size);
+      perror(strerror(errno));
+      printf("client: bytes written to file %d\n", writtenbytes);
+      printf("client: untarring project");
+      system(untar); 
+      system("rm -rf client.tar.gz");
+      printf("checkout was a sucess\n");
+    } else {
+	printf("the server could not find the project \n");
+    }
+    close(sockfd);
+    printf("checkout\n");
   } 
-  close(sockfd);
+  if(strcmp(op,"update") == 0){
+  } 
+  if(strcmp(op,"upgrade") == 0){
+  } 
+  if(strcmp(op,"commit") == 0){
+  } 
+  if(strcmp(op,"push") == 0){
+  } 
+  if(strcmp(op,"push") == 0){
+  } 
+
+  // wait to recieve the response.
 }
-
-
-
