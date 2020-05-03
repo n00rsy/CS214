@@ -822,6 +822,23 @@ int commit(char * projectName){
   freeManifest(serverManifest);
 }
 
+int push(char * projectName){
+  //check if project exists on server
+
+  // check if client has .commit
+  char * commitPath = getCommitPath(projectName);
+  int commit = open(commitPath, O_RDONLY);
+  if(commitPath<0){
+    printf("No .commit file. Cannot push.\n");
+    free(commitPath);
+    return 0;
+  }
+
+  //server lock repo and check if server commit is same as client. should do this with hash
+  //char * clientCommitHash = hash(commitPath);
+  //char * serverCommitHash = hash()
+}
+
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
