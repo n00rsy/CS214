@@ -859,13 +859,30 @@ int doesConfigureExist(){
 
 int main(int argc, char *argv[])
 {
-
   if (argc < 2) {
-    fprintf(stderr,"not enough arguments usage => ./WTF `command` \n");
+    fprintf(stderr,"not enough arguments usage => ./WTF <command> \n");
     exit(1);
   }
 
   char *op = argv[1]; 
+
+  if(strcmp(op,"add") == 0){
+    if(argc<4){
+      printf("Not enough arguements. Usage => ./WTF add <project name> <filename>\n");
+      exit(1);
+    }
+    addFile(argv[2],argv[3]);
+    exit(0);
+  }
+  if(strcmp(op,"remove") == 0){
+    if(argc<4){
+      printf("Not enough arguements. Usage => ./WTF remove <project name> <filename>\n");
+      exit(1);
+    }
+    removeFile(argv[2],argv[3]);
+    exit(0);
+  }
+
   if(strcmp(op,"configure") == 0){
     if(argc < 4){
   printf("not enough arguments usage => ./WTF configure `hostname` `port` \n");
@@ -875,11 +892,14 @@ int main(int argc, char *argv[])
     char *port = argv[3];
 
     configure(host,port);
-    return 1;
+    return 0;
   } 
 
-  // addFile("test", "test.txt");
-  // hash("test/test.txt");
+    if(argc<3){
+      printf("Incorrect arguements. Usage => ./WTF <command> <project name> <optional>\n");
+      exit(1);
+    }
+
   int sockfd, numbytes;  
   char buf[MAXDATASIZE];
   struct addrinfo hints, *servinfo, *p;
@@ -948,6 +968,10 @@ int main(int argc, char *argv[])
 
   // parse command
   if(strcmp(op,"checkout") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF checkout <project name>\n");
+      exit(1);
+    }
     if(doesConfigureExist() == 0){
       printf("No .configure file found. Please run configure\n");
       return 1;
@@ -995,6 +1019,10 @@ int main(int argc, char *argv[])
     printf("checkout\n");
   } 
   if(strcmp(op,"update") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF update <project name>\n");
+      exit(1);
+    }
     char* projname = argv[2];
     printf("updating %s from server...\n", projname);
     update(sockfd, projname);
@@ -1002,13 +1030,54 @@ int main(int argc, char *argv[])
     
   } 
   if(strcmp(op,"upgrade") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF upgrade <project name>\n");
+      exit(1);
+    }
   } 
   if(strcmp(op,"commit") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF commit <project name>\n");
+      exit(1);
+    }
   } 
   if(strcmp(op,"push") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF push <project name>\n");
+      exit(1);
+    }
   } 
-  if(strcmp(op,"push") == 0){
+  if(strcmp(op,"create") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF create <project name>\n");
+      exit(1);
+    }
   } 
+  if(strcmp(op,"destroy") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF destroy <project name>\n");
+      exit(1);
+    }
+  }
+  if(strcmp(op,"currentversion") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF currentversion <project name>\n");
+      exit(1);
+    }
+  }
+
+  if(strcmp(op,"history") == 0){
+    if(argc!=3){
+      printf("Incorrect arguements. Usage => ./WTF history <project name>\n");
+      exit(1);
+    }
+  }
+  if(strcmp(op,"rollback") == 0){
+    if(argc!=4){
+      printf("Incorrect arguements. Usage => ./WTF rollback <project name> <version>\n");
+      exit(1);
+    }
+  }
 
   // wait to recieve the response.
 }
