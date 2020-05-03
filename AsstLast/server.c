@@ -170,12 +170,35 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
 	    printf("could not update %s. Are you sure the project and its .Manifest exists?  \n",tokenptr);
 	    char dummybuffer[1];
 	    send(client_descriptor,dummybuffer,1,0);
-	    return NULL;
-	  } 
+	  } else { 
 	  printf("server: sending client the project manifest\n");
 	  send_client_manifest(client_descriptor, manifestPath);
 	  free(buffercpy);
-	}
+          }
+	} else if(strcmp(tokenptr,"create") == 0){
+	  // check if project name exists 
+	  tokenptr = strtok(NULL, ":");
+	  if(!exist(tokenptr)){
+	    printf("server: project already exists!\n");
+	    char dummybuffer[1];
+	    send(client_descriptor,dummybuffer,1,0);
+          } else {
+             // create the project
+             char *mkdir = "mkdir";
+             char mkprojcmd[strlen(mkdir) + strlen(tokenptr)]; 
+             sprintf(mkprojcmd,"%s %s",mkdir,tokenptr);
+             printf("server: creating... %s\n",mkprojcmd);
+             system(mkprojcmd);
+             // create a manifest file
+             char makemanifest[strlen(tokenptr) + 1 + strlen(tokenptr)]; 
+             sprintf(makemanifest,"%s/.Manifest",tokenptr);
+             int manifest_fd = open(makemanifest, O_CREAT | O_RDWR ,0666);
+             write(manifest_fd,"1\n",2);
+             // send client the project
+             send_client_project(client_descriptor,tokenptr);
+             free(buffercpy);
+          }
+        }
       }
     } 
   }

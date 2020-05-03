@@ -1008,16 +1008,19 @@ int main(int argc, char *argv[])
       int writtenbytes = write(finalfd,file_buffer,file_size);
       perror(strerror(errno));
       printf("client: bytes written to file %d\n", writtenbytes);
-      printf("client: untarring project");
       system(untar); 
       system("rm -rf client.tar.gz");
       printf("checkout was a sucess\n");
+      free(file_buffer);
+      free(buffercpy);
     } else {
-  printf("the server could not find the project \n");
+       printf("the server could not find the project \n");
     }
     close(sockfd);
     printf("checkout\n");
   } 
+  // CREATE, ADD, COMMIT, PUSH
+  // CREATE .Manifest 1 and \n
   if(strcmp(op,"update") == 0){
     if(argc!=3){
       printf("Incorrect arguements. Usage => ./WTF update <project name>\n");
@@ -1052,6 +1055,15 @@ int main(int argc, char *argv[])
       printf("Incorrect arguements. Usage => ./WTF create <project name>\n");
       exit(1);
     }
+        // does project name exist on server, then fail
+        // server creates dir, with .Manifest, write 1 and \n
+        // send it to client as well
+    char *projname = argv[2];
+    printf("creating %s on server...\n", projname);
+    char create_buffer[strlen("create") + strlen(projname)];
+    sprintf(create_buffer,"create:%s",projname);
+    // now the cmd string is ready, lets send it to the server to get our projetc
+    send(sockfd,create_buffer,strlen(create_buffer),0);
   } 
   if(strcmp(op,"destroy") == 0){
     if(argc!=3){
