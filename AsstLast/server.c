@@ -149,7 +149,8 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
      
       char *tokenptr;
       tokenptr = strtok(buffercpy, ":");
-      printf("server: cmd from client %s\n",tokenptr);
+
+      printf("server: cmd from client %s with %d bytes\n",tokenptr, num_bytes);
       while(tokenptr != NULL){
 	if(strcmp(tokenptr,"checkout") == 0){
 	  // clients to checkout. lets do it
@@ -158,7 +159,7 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
 	     printf("%s not found on server\n",tokenptr);
 	     char dummybuffer[1];
 	     send(client_descriptor,dummybuffer,1,0);
-	     return NULL;
+	     // return NULL;
 	  }
 	  printf("server: sending client the project -> %s \n", tokenptr);
 	  send_client_project(client_descriptor, tokenptr);
@@ -217,6 +218,19 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
 	    system(buffer);
 	    char dummybuffer[1];
 	    send(client_descriptor,dummybuffer,1,0);
+	  }
+	} else if(strcmp(tokenptr,"upgrade") == 0){
+	  // check if project name exists 
+	  tokenptr = strtok(NULL, ":");
+	  printf("tokenptr: %s\n",tokenptr);
+	  if(!exist(tokenptr)){
+	    printf("server: project does not exist!\n");
+	    char *response = "project does not exist\n";
+	    send(client_descriptor,response,strlen(response),0);
+	  } else {
+	    // just send the entire project back lmao
+	    printf("updating %s\n",tokenptr);
+	    send_client_project(client_descriptor,tokenptr);
 	  }
 	}
       } 

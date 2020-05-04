@@ -19,22 +19,24 @@
 const int buffer_size = 100;
 
 typedef struct file_node {
-   char versionNum;
-   char* filePath;
-   char *hash;//prob change this data type
+  char versionNum;
+  char* filePath;
+  char *hash;//prob change this data type
 
-   struct file_node * next;
+  struct file_node * next;
 } fileNode;
 
 typedef struct dotfile_struct {
-   int versionNum;
-   fileNode * head;
+  int versionNum;
+  fileNode * head;
 
 } manifestStruct;
 
+  void recv_file_from_server(int sockfd, char*cmd,  char* msg);
+
 void printFileNode(fileNode * fNode){
-printf("File version num: %d\tpath: '%s'\thash: '%s'\n",
-    fNode->versionNum, fNode->filePath, fNode->hash);
+  printf("File version num: %d\tpath: '%s'\thash: '%s'\n",
+      fNode->versionNum, fNode->filePath, fNode->hash);
 }
 
 void printManifest(manifestStruct * man){
@@ -72,37 +74,11 @@ void freeManifest(manifestStruct * man){
 }
 
 
-char * hash(char * filePath){
-
-  char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
-
-  c[MD5_DIGEST_LENGTH] = '\0';
-  int i;
-  int inFile = open (filePath, O_RDONLY);
-  MD5_CTX mdContext;
-  int bytes;
-  unsigned char data[1024];
-
-  if (inFile <0) {
-    printf ("%s can't be opened.\n", filePath);
-    return NULL;
-  }
-
-  MD5_Init (&mdContext);
-  while (bytes = read (inFile,data,1023)){
-    MD5_Update (&mdContext, data, bytes);
-  }
-  MD5_Final (c,&mdContext);
-  for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
-  printf (" %s\n", filePath);
-  close (inFile);
-  if(strcmp(c, "")==0){
-    c = "<empty file>";
-  }
-  return c;
-
-
+char * leNode(fileNode * fNode){
+  printf("File version num: %d\tpath: '%s'\thash: '%s'\n",
+      fNode->versionNum, fNode->filePath, fNode->hash);
 }
+
 
 char * getManifestPath(char * projectName){
   int mainfestPathLen = strlen(projectName)+12;
@@ -136,21 +112,103 @@ char * getCommitPath(char * projectName){
   return manifestPath;
 }
 
+
+// writes to .Configure file
+void configure(char* host, char* port){
+  if( access(".configure", F_OK ) != -1 ) {
+    printf("found .configure, rewriting it!\n");
+  } else {
+    printf("creating .configure file\n");
+  }
+
+  // create configure file
+  int configure_fd = open(".configure", O_CREAT | O_RDWR ,0666);
+
+  int len = strlen(host) + strlen(port) + 1;
+  char config_buf[len];
+  sprintf(config_buf, "%s:%s",host,port);
+  int writtenbytes = write(configure_fd,config_buf,len);
+  if(writtenbytes <= 0){
+    printf("failed to create a configure file");
+  } else {
+    printf("wrote %d bytes to configure file\n", writtenbytes);
+  }
+}
+
+char* getProjectManifestFromServer(int sockfd, char *projname){
+  int numbytes;
+  char buf[MAXDATASIZE];
+  if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
+
+    // get size of manifest from server
+    char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
+    strcpy(buffercpy,buf);
+    char *tokenptr;
+    tokenptr = strtok(buffercpy, ":");
+    tokenptr = strtok(NULL, ":");
+    printf("client: project length in bytes is %s \n", tokenptr);
+    off_t file_size = atoi(tokenptr);
+
+    // prepare to read manifest
+    char *file_buffer = (char*) malloc(sizeof(char) * file_size);
+    int bytes_recv = read(sockfd,file_buffer, file_size);
+    printf("client: bytes recieved from server %d\n", bytes_recv);
+
+    // write the bytes into a file
+    char* localManifestPath = getManifestPath(projname);
+    strcat(localManifestPath,"FromServer");
+    int finalfd = open(localManifestPath, O_CREAT | O_RDWR ,0666);
+    int writtenbytes = write(finalfd,file_buffer,file_size);
+    perror(strerror(errno));
+    return localManifestPath;
+  }
+}
+
+
+char * hash(char * filePath){
+  char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
+
+  c[MD5_DIGEST_LENGTH] = '\0';
+  int i;
+  int inFile = open (filePath, O_RDONLY);
+  MD5_CTX mdContext;
+  int bytes;
+  unsigned char data[1024];
+
+  if (inFile <0) {
+    printf ("%s can't be opened.\n", filePath);
+    return NULL;
+  }
+
+  MD5_Init (&mdContext);
+  while (bytes = read (inFile,data,1023)){
+    MD5_Update (&mdContext, data, bytes);
+  }
+  MD5_Final (c,&mdContext);
+  for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
+  printf(" %s\n", filePath);
+  close (inFile);
+  if(strcmp(c, "")==0){
+    c = "<empty file>";
+  }
+  return c;
+}
+
 //parses line in format <version num> \t <path/name> \t <hash> \t
 fileNode * parseLine(char * line){
   fileNode * fNode = malloc(sizeof(fileNode));
 
   int count = 0;
-char *ptr = line;
-while((ptr = strchr(ptr, '\t')) != NULL) {
+  char *ptr = line;
+  while((ptr = strchr(ptr, '\t')) != NULL) {
     count++;
     ptr++;
-}
+  }
 
-if(count!=3){
-  printf("Found corrupted line in manifest: %s\n", line);
-  return NULL;
-}
+  if(count!=3){
+    printf("Found corrupted line in manifest: %s\n", line);
+    return NULL;
+  }
 
   char * token = strtok(line, "\t");
   fNode->versionNum = atoi(token);
@@ -173,10 +231,10 @@ if(count!=3){
 //returns pointer to struct containing llist of files
 manifestStruct * readManifest(char * manifestPath){
 
-int manifestFD = open(manifestPath,O_RDWR);
+  int manifestFD = open(manifestPath,O_RDWR);
   if(manifestFD<0){
-   printf(".Manifest not found\n");
-   return NULL;
+    printf(".Manifest not found\n");
+    return NULL;
   }
 
   manifestStruct * man = malloc(sizeof(manifestStruct));
@@ -195,21 +253,21 @@ int manifestFD = open(manifestPath,O_RDWR);
     if(count ==0){
       char * p = &buffer[0];
       while(*p!='\n'){
-        if(*p=='\0'){
-          printf("Manifest formatted incorrectly.\n");
-          free(man);
-          return NULL;
-        }
-        p++;
+	if(*p=='\0'){
+	  printf("Manifest formatted incorrectly.\n");
+	  free(man);
+	  return NULL;
+	}
+	p++;
       }
       *p='\0';
       man->versionNum = atoi(buffer);
       int i = 0;
       p++;
       while(*p!='\0'){
-        buffer[i] = *p;
-        p++;
-        i++;
+	buffer[i] = *p;
+	p++;
+	i++;
       }
       buffer[i] = '\0';
 
@@ -221,45 +279,45 @@ int manifestFD = open(manifestPath,O_RDWR);
     char * p2 = &fullBuffer[0];
     char * p1;
     int shouldbreak = 0;
-    
+
     while(*p2!='\0'){
       p1=p2;
       while(*p2!='\n' && *p2!='\0'){
-        p2++;
+	p2++;
       }
 
       int i;
       switch(*p2){
-        case '\0':
-          i=0;
-          while(*p1!='\0'){
-            fullBuffer[i] = *p1;
-            i++;
-            p1++;
-          }
-          fullBuffer[i] = '\0';
-          //printf("\n\nleftover buffer: '%s'\t%c\n", fullBuffer, *(p2-1));
-          break;
-        case '\n':
-        *p2='\0';
-        //printf("Parsing %s\n", p1);
-        fileNode * new = parseLine(p1);
-        if(new!=NULL){
-        //insert new node at end of llist
-        if(man->head ==NULL){
-          man->head = new;
-        }
-        else{
-          fileNode * last = man->head;
-          while(last->next !=NULL){
-            last = last->next;
-          }
-          last->next = new;
-        }
-      }
-        *p2='\n';
-          p2++;
-          break;
+	case '\0':
+	  i=0;
+	  while(*p1!='\0'){
+	    fullBuffer[i] = *p1;
+	    i++;
+	    p1++;
+	  }
+	  fullBuffer[i] = '\0';
+	  //printf("\n\nleftover buffer: '%s'\t%c\n", fullBuffer, *(p2-1));
+	  break;
+	case '\n':
+	  *p2='\0';
+	  //printf("Parsing %s\n", p1);
+	  fileNode * new = parseLine(p1);
+	  if(new!=NULL){
+	    //insert new node at end of llist
+	    if(man->head ==NULL){
+	      man->head = new;
+	    }
+	    else{
+	      fileNode * last = man->head;
+	      while(last->next !=NULL){
+		last = last->next;
+	      }
+	      last->next = new;
+	    }
+	  }
+	  *p2='\n';
+	  p2++;
+	  break;
       }
     }
   }
@@ -301,27 +359,25 @@ int writeManifest(manifestStruct * man, char * manifestPath){
   close(manifest);
 }
 
-int writeConflict(fileNode * fNode, char * projectName){
-  printf("C %s\n", fNode->filePath);
+int writeConflict(char * filePath, char * hash, char * projectName){
+  printf("C %s\n", filePath);
   char * conflictPath = getConflictPath(projectName);
   int conflict = open(conflictPath,O_RDWR | O_CREAT | O_APPEND, 0666);
   if(conflict<0){
     printf("Failed to open .conflict\n");
     return 0;
   }
-  char str[12];
-  sprintf(str, "C\t%d\t", fNode->versionNum);
-  write(conflict,str,strlen(str));
+  write(conflict,"C\t",2);
 
-  write(conflict, fNode->filePath, strlen(fNode->filePath));
+  write(conflict, filePath, strlen(filePath));
   write(conflict, "\t",1);
-  write(conflict, fNode->hash, strlen(fNode->hash));
+  write(conflict, hash, strlen(hash));
   write(conflict, "\t\n",2);
   close(conflict);
 }
 
-int writeUpdate(fileNode * fNode, char updateType, char * projectName){
-  printf("%c %s\n",updateType, fNode->filePath);
+int writeUpdate( char updateType, char * filePath, char * hash, char * projectName){
+  printf("%c %s\n",updateType, filePath);
   char * updatePath = getUpdatePath(projectName);
   int update = open(updatePath,O_RDWR | O_CREAT | O_APPEND, 0666);
   if(update<0){
@@ -330,18 +386,18 @@ int writeUpdate(fileNode * fNode, char updateType, char * projectName){
   }
 
   char str[12];
-  sprintf(str, "%c\t%d\t", updateType, fNode->versionNum);
+  sprintf(str, "%c\t", updateType);
   write(update,str,strlen(str));
 
-  write(update, fNode->filePath, strlen(fNode->filePath));
+  write(update, filePath, strlen(filePath));
   write(update, "\t",1);
-  write(update, fNode->hash, strlen(fNode->hash));
+  write(update, hash, strlen(hash));
   write(update, "\t\n",2);
   close(update);
 }
 
-int writeCommit(fileNode * fNode, char commitType, char * projectName){
-  printf("%c %s\n",commitType, fNode->filePath);
+int writeCommit(char commitType, char * filePath, char * hash, char * projectName){
+  printf("%c %s\n",commitType, filePath);
   char * commitPath = getCommitPath(projectName);
   int commit = open(commitPath,O_RDWR | O_CREAT | O_APPEND, 0666);
   if(commit<0){
@@ -349,24 +405,24 @@ int writeCommit(fileNode * fNode, char commitType, char * projectName){
     return 0;
   }
 
-    char str[12];
-  sprintf(str, "%c\t%d\t", commitType, fNode->versionNum);
+  char str[12];
+  sprintf(str, "%c\t", commitType);
   write(commit,str,strlen(str));
 
-  write(commit, fNode->filePath, strlen(fNode->filePath));
+  write(commit, filePath, strlen(filePath));
   write(commit, "\t",1);
-  write(commit, fNode->hash, strlen(fNode->hash));
+  write(commit, hash, strlen(hash));
   write(commit, "\t\n",2);
   close(commit);
 }
 
 fileNode * createFileNodeFromPath(char * projectName, char * filePath){
-  
+
   char * fullPath = malloc(sizeof(char)*(strlen(projectName)+strlen(filePath)+5));
   strcpy(fullPath, projectName);
   strcat(fullPath, "/");
   strcat(fullPath, filePath);
-  
+
   fileNode * fNode = malloc(sizeof(fileNode));
   if(fNode ==NULL){
     return NULL;
@@ -381,13 +437,13 @@ fileNode * createFileNodeFromPath(char * projectName, char * filePath){
 
 
 int addFile(char * projectName, char * filePath){
- //check if project exists on client side
- DIR* d;
- d = opendir(projectName);
- if(d==NULL){
-   printf("Project does not exist.\n");
-   return 0;
- }
+  //check if project exists on client side
+  DIR* d;
+  d = opendir(projectName);
+  if(d==NULL){
+    printf("Project does not exist.\n");
+    return 0;
+  }
 
   char * manifestPath =getManifestPath(projectName);
   manifestStruct * man = readManifest(manifestPath);
@@ -396,6 +452,7 @@ int addFile(char * projectName, char * filePath){
     free(manifestPath);
     return 0;
   }
+
   //printManifest(man);
   //printf("\n\n");
   //add node to llist w/ alphabetical sort
@@ -407,59 +464,63 @@ int addFile(char * projectName, char * filePath){
     free(manifestPath);
     return 0;
   }
-
+  if(new->hash == NULL){
+    printf("File %s does not exist.\n", new->filePath);
+    freeFileNode(new);
+    free(manifestPath);
+    return 0;
+  }
   if(man->head ==NULL){
     man->head = new;
-
   }
   else{
-  fileNode * ptr = man->head;
-  fileNode * prev;
+    fileNode * ptr = man->head;
+    fileNode * prev;
 
-  if(strcmp(new->filePath, ptr->filePath)==0){
+    if(strcmp(new->filePath, ptr->filePath)==0){
       printf("File %s %s already in Manifest.\n", new->filePath, ptr->filePath);
       freeFileNode(new);
       free(manifestPath);
       return 0;
-  }
-  //add to front
-  if(strcmp(new->filePath, ptr->filePath)<0){
-    new->next = man->head;
-    man->head = new;
-    free(manifestPath);
-    printf("added %s to %s\n", filePath, projectName);
-    return 1;
-  }
-  else{
-    while(ptr->next!=NULL && strcmp(new->filePath, ptr->filePath)>=0){
-      ptr = ptr->next;
     }
+    //add to front
+    if(strcmp(new->filePath, ptr->filePath)<0){
+      new->next = man->head;
+      man->head = new;
+      free(manifestPath);
+      printf("added %s to %s\n", filePath, projectName);
+      return 1;
+    }
+    else{
+      while(ptr->next!=NULL && strcmp(new->filePath, ptr->filePath)>=0){
+	ptr = ptr->next;
+      }
       if(strcmp(new->filePath, ptr->filePath)==0 ||
-         strcmp(new->filePath, ptr->next->filePath)==0){
-        printf("File %s already in Manifest.\n", filePath);
-        freeFileNode(new);
-        free(manifestPath);
-        return 0;
+	  strcmp(new->filePath, ptr->next->filePath)==0){
+	printf("File %s already in Manifest.\n", filePath);
+	freeFileNode(new);
+	free(manifestPath);
+	return 0;
+      }
+      new->next = ptr->next;
+      ptr->next = new;
+    }
   }
-    new->next = ptr->next;
-    ptr->next = new;
-  }
-}
   /*
-  fileNode * ptr = man->head;
-  fileNode * last;
-  while(ptr!=NULL){
-    if(strcmp(filePath, ptr->filePath)==0){
-      printf("File %s already in Manifest.\n", filePath);
-      return 0;
-    }
-    if(ptr->next ==NULL){
-      last = ptr;
-    }
-    ptr=ptr->next;
-  }
-  last->next = createFileNodeFromPath(projectName,filePath);
-  */
+     fileNode * ptr = man->head;
+     fileNode * last;
+     while(ptr!=NULL){
+     if(strcmp(filePath, ptr->filePath)==0){
+     printf("File %s already in Manifest.\n", filePath);
+     return 0;
+     }
+     if(ptr->next ==NULL){
+     last = ptr;
+     }
+     ptr=ptr->next;
+     }
+     last->next = createFileNodeFromPath(projectName,filePath);
+   */
   printManifest(man);
   writeManifest(man,manifestPath);
   free(manifestPath);
@@ -468,14 +529,14 @@ int addFile(char * projectName, char * filePath){
 }
 
 int removeFile(char * projectName, char * filePath){
- //check if project exists on client side
- DIR* d;
- d = opendir(projectName);
- if(d==NULL){
-   printf("Project does not exist.\n");
-   return 0;
- }
-  
+  //check if project exists on client side
+  DIR* d;
+  d = opendir(projectName);
+  if(d==NULL){
+    printf("Project does not exist.\n");
+    return 0;
+  }
+
   char * manifestPath = getManifestPath(projectName);
   manifestStruct * man = readManifest(manifestPath);
 
@@ -487,7 +548,7 @@ int removeFile(char * projectName, char * filePath){
   //remove node from llist
   fileNode * ptr = man->head;
   fileNode * prev;
-  
+
   if(ptr !=NULL && strcmp(ptr->filePath, filePath)==0){
     man->head = ptr->next;
     free(ptr);
@@ -511,45 +572,16 @@ int removeFile(char * projectName, char * filePath){
   return 1;
 }
 
-char* getProjectManifestFromServer(int sockfd, char *projname){
-  int numbytes;
-  char buf[MAXDATASIZE];
-  if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
-
-    // get size of manifest from server
-    char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
-    strcpy(buffercpy,buf);
-    char *tokenptr;
-    tokenptr = strtok(buffercpy, ":");
-    tokenptr = strtok(NULL, ":");
-    printf("client: project length in bytes is %s \n", tokenptr);
-    off_t file_size = atoi(tokenptr);
-
-    // prepare to read manifest
-    char *file_buffer = (char*) malloc(sizeof(char) * file_size);
-    int bytes_recv = read(sockfd,file_buffer, file_size);
-    printf("client: bytes recieved from server %d\n", bytes_recv);
-
-    // write the bytes into a file
-    char* localManifestPath = getManifestPath(projname);
-    strcat(localManifestPath,"FromServer");
-    int finalfd = open(localManifestPath, O_CREAT | O_RDWR ,0666);
-    int writtenbytes = write(finalfd,file_buffer,file_size);
-    perror(strerror(errno));
-    return localManifestPath;
-  }
-}
-
 int update(int sockfd, char * projectName){
-//check if project exists on server
-//check if client can communicate with server
- DIR* d;
- d = opendir(projectName);
- if(d==NULL){
-   printf("Project does not exist.\n");
-   return 0;
- }
-  
+  //check if project exists on server
+  //check if client can communicate with server
+  DIR* d;
+  d = opendir(projectName);
+  if(d==NULL){
+    printf("Project does not exist.\n");
+    return 0;
+  }
+
   char * manifestPath = getManifestPath(projectName);
   manifestStruct * clientManifest = readManifest(manifestPath);
 
@@ -557,13 +589,19 @@ int update(int sockfd, char * projectName){
     printf("Unable to open manifest or corrupted manifest\n");
     return 0;
   }
+  // get project manifest from server. we will call it .ManifestFromServer to avoid rewriting
+  // local copy
+  char*manifestFromServerPath = getProjectManifestFromServer(sockfd, projectName); 
 
-  //get manifest from server
+  //get create manifest struct from manifest downloaded from server
+  manifestStruct * serverManifest = readManifest(manifestFromServerPath);
 
-  char *manifestFromServerPath = getProjectManifestFromServer(sockfd, projectName); 
-  manifestStruct * serverManifest = readManifest("serverTest/.Manifest");
-  printf("server version num: %d\n", serverManifest->versionNum);
-  
+  if(serverManifest == NULL){
+    printf("Failed to fetch manifest from server.\n");
+    freeManifest(clientManifest);
+    return 0;
+  }
+
   //printManifest(clientManifest);
   //printManifest(serverManifest);
 
@@ -590,64 +628,63 @@ int update(int sockfd, char * projectName){
   fileNode * clientPtr = clientManifest->head;
   fileNode * serverPtr = serverManifest->head;
 
-
   while(clientPtr!=NULL){
     int found = 0;
     char * liveHash = hash(clientPtr->filePath);
     while(serverPtr!=NULL){
       //printf("comparing: '%s' '%s'\n", clientPtr->filePath, serverPtr->filePath);
       if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
-        found = 1;
-        //conflict
-        if(strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
-           strcmp(liveHash,clientPtr->hash)!=0){
-          writeConflict(serverPtr, projectName);
-        }
-        //modify code
-        if(clientPtr->versionNum!=serverPtr->versionNum &&
-           strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
-           strcmp(clientPtr->hash, liveHash)==0){
-          writeUpdate(serverPtr, 'M', projectName);
-        }
+	found = 1;
+	//conflict
+	if(strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
+	    strcmp(liveHash,clientPtr->hash)!=0){
+	  writeConflict(serverPtr->filePath, liveHash, projectName);
+	}
+	//modify code
+	if(clientPtr->versionNum!=serverPtr->versionNum &&
+	    strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
+	    strcmp(clientPtr->hash, liveHash)==0){
+	  writeUpdate('M', serverPtr->filePath, serverPtr->hash, projectName);
+	}
       }
       serverPtr = serverPtr->next;
     }
     //delete code
     if(found == 0){
-      writeUpdate(clientPtr, 'D', projectName);
+      writeUpdate('D', clientPtr->filePath, clientPtr->hash, projectName);
     }
     printf("\n");
     serverPtr = serverManifest->head;
     clientPtr=clientPtr->next;
   }
 
-//bad initial design. have to do second pass for add code
-clientPtr = clientManifest->head;
-serverPtr = serverManifest->head;
+  //bad initial design. have to do second pass for add code
+  clientPtr = clientManifest->head;
+  serverPtr = serverManifest->head;
 
-while(serverPtr!=NULL){
-  int found = 0;
-  while(clientPtr!=NULL){
-    if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
-        found = 1;
+  while(serverPtr!=NULL){
+    int found = 0;
+    while(clientPtr!=NULL){
+      if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
+	found = 1;
       }
 
-    clientPtr=clientPtr->next;
+      clientPtr=clientPtr->next;
+    }
+    //add code
+    if(found ==0){
+      writeUpdate('A', serverPtr->filePath, serverPtr->hash, projectName);
+    }
+    clientPtr = clientManifest->head;
+    serverPtr = serverPtr->next;
   }
-  //add code
-  if(found ==0){
-    writeUpdate(serverPtr, 'A', projectName);
-  }
-  clientPtr = clientManifest->head;
-  serverPtr = serverPtr->next;
+
+  free(updatePath);
+  free(conflictPath);
+  free(manifestPath);
 }
 
-free(updatePath);
-free(conflictPath);
-free(manifestPath);
-}
-
-int upgrade(char * projectName){
+int upgrade(int sockfd, char * projectName){
   //check if server can be contacted
   //check if project exists on server
 
@@ -658,6 +695,18 @@ int upgrade(char * projectName){
     free(updatePath);
     return 0;
   }
+  
+  off_t file_size;
+  file_size = lseek(update,0,SEEK_END);
+  if(file_size == 0){
+    // Update is empty
+    printf("Project is up to date\n");
+    free(updatePath);
+    return 0;
+  }
+  lseek(update,0,0);
+  // check if update is empty
+
   char * conflictPath = getConflictPath(projectName);
   int conflict = open(conflictPath, O_RDONLY);
   if(conflict >0){
@@ -669,6 +718,22 @@ int upgrade(char * projectName){
   }
 
   //do updates
+  printf("Upgrading %s from server...\n", projectName);
+
+  // first delete the local copy
+  char deleteLocalCopyBuffer[strlen(projectName) + 8]; 
+  sprintf(deleteLocalCopyBuffer, "rm -rf %s",projectName);
+
+  char upgradebuff[strlen("upgrade:") + strlen(projectName)];
+  sprintf(upgradebuff,"upgrade:%s",projectName);
+  send(sockfd,upgradebuff,strlen(upgradebuff),0);
+  recv_file_from_server(sockfd,"upgrade","the server could not find the project\n");
+
+  // We are done, lets delete .Update 
+  printf("deleting %s\n", updatePath);
+  char deleteUpdateBuffer[strlen(updatePath) + 3]; 
+  sprintf(deleteUpdateBuffer, "rm %s",updatePath);
+  system(deleteUpdateBuffer);
 
   close(update);
   free(updatePath);
@@ -688,13 +753,13 @@ int commit(char * projectName){
   //check if project exists on server
   //check if client can communicate with server
   //fetch server manifest, fail if not possible
-  
+
   manifestStruct * serverManifest = readManifest("serverTest/.Manifest");
-  
+
   //fail if client and server manifests are different versions
   if(serverManifest->versionNum!=clientManifest->versionNum){
     printf("Please update local project before commit.\nServer Version: %d\nLocal Version: %d\n",
-      serverManifest->versionNum, clientManifest->versionNum);
+	serverManifest->versionNum, clientManifest->versionNum);
     freeManifest(clientManifest);
     freeManifest(serverManifest);
     return 0;
@@ -726,34 +791,34 @@ int commit(char * projectName){
     return 0;
   }
 
-    fileNode * clientPtr = clientManifest->head;
-    fileNode * serverPtr = serverManifest->head;
+  fileNode * clientPtr = clientManifest->head;
+  fileNode * serverPtr = serverManifest->head;
 
-    char * commitPath = getCommitPath(projectName);
+  char * commitPath = getCommitPath(projectName);
 
-    while(clientPtr!=NULL){
-      int found = 0;
-      char * liveHash = hash(clientPtr->filePath);
-      while(serverPtr!=NULL){
+  while(clientPtr!=NULL){
+    int found = 0;
+    char * liveHash = hash(clientPtr->filePath);
+    while(serverPtr!=NULL){
 
-        //Modify code
-        if(strcmp(clientPtr->filePath,serverPtr->filePath)==0){
-          found = 1;
-        if(strcmp(clientPtr->hash, serverPtr->hash)==0 &&
-           strcmp(liveHash,clientPtr->hash)!=0){
-          writeCommit(clientPtr, 'M',projectName);
-        }
+      //Modify code
+      if(strcmp(clientPtr->filePath,serverPtr->filePath)==0){
+	found = 1;
+	if(strcmp(clientPtr->hash, serverPtr->hash)==0 &&
+	    strcmp(liveHash,clientPtr->hash)!=0){
+	  writeCommit('M', serverPtr->filePath, serverPtr->hash, projectName);
+	}
       }
-        serverPtr = serverPtr->next;
-      }
-      //add code
-      if(found == 0){
-        writeCommit(clientPtr, 'A', projectName);
-      }
-      serverPtr = serverManifest->head;
-      clientPtr=clientPtr->next;
-      //free(liveHash);
+      serverPtr = serverPtr->next;
     }
+    //add code
+    if(found == 0){
+      writeCommit('A', clientPtr->filePath, clientPtr->hash, projectName);
+    }
+    serverPtr = serverManifest->head;
+    clientPtr=clientPtr->next;
+    //free(liveHash);
+  }
 
   //bad initial design. have to do second pass for delete code
   clientPtr = clientManifest->head;
@@ -763,23 +828,23 @@ int commit(char * projectName){
     int found = 0;
     while(clientPtr!=NULL){
       if(strcmp(clientPtr->filePath, serverPtr->filePath)==0){
-          found = 1;
-          //error case
-          if(strcmp(clientPtr->hash, serverPtr->hash)!=0 &&
-             serverPtr->versionNum>=clientPtr->versionNum){
-            printf("Must sync with repo before committing changes.\n");
-            remove(commitPath);
-            free(commitPath);
-            freeManifest(clientManifest);
-            freeManifest(serverManifest);
-            return 0;
-          }
-        }
+	found = 1;
+	//error case
+	if(strcmp(clientPtr->hash, serverPtr->hash)!=0 &&
+	    serverPtr->versionNum>=clientPtr->versionNum){
+	  printf("Must sync with repo before committing changes.\n");
+	  remove(commitPath);
+	  free(commitPath);
+	  freeManifest(clientManifest);
+	  freeManifest(serverManifest);
+	  return 0;
+	}
+      }
       clientPtr=clientPtr->next;
     }
     //delete code
     if(found ==0){
-      writeCommit(clientPtr, 'D', projectName);
+      writeCommit('D', serverPtr->filePath, serverPtr->hash, projectName);
     }
     clientPtr = clientManifest->head;
     serverPtr = serverPtr->next;
@@ -789,304 +854,289 @@ int commit(char * projectName){
   freeManifest(serverManifest);
 }
 
+  // get sockaddr, IPv4 or IPv6:
+  void *get_in_addr(struct sockaddr *sa)
+  {
+    if (sa->sa_family == AF_INET) {
+      return &(((struct sockaddr_in*)sa)->sin_addr);
+    }
 
-
-
-
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
-  if (sa->sa_family == AF_INET) {
-    return &(((struct sockaddr_in*)sa)->sin_addr);
+    return &(((struct sockaddr_in6*)sa)->sin6_addr);
   }
 
-  return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
-int doesConfigureExist(){
-  if(access(".configure", F_OK ) != -1 ) {
-    return 1;
-  } else {
-    return 0;
+  int doesConfigureExist(){
+    if(access(".configure", F_OK ) != -1 ) {
+      return 1;
+    } else {
+      return 0;
+    }
   }
-}
-// generic function to recieve a file with a msg depending on cmd.
-// for exmaple if checkout fails, msg should be "project couldnt be found"
-void recv_file_from_server(int sockfd, char*cmd,  char* msg){
-  char buffer[MAXDATASIZE];
-  int numbytes;
-  if((numbytes = recv(sockfd, buffer, MAXDATASIZE - 1, 0)) != 1 ){
-    // copy buf into buffercpy
-    char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
-    strcpy(buffercpy,buffer);
-    char *tokenptr;
-    tokenptr = strtok(buffercpy, ":");
-    tokenptr = strtok(NULL, ":");
+  // generic function to recieve a file with a msg depending on cmd.
+  // for exmaple if checkout fails, msg should be "project couldnt be found"
+  void recv_file_from_server(int sockfd, char*cmd,  char* msg){
+    char buffer[MAXDATASIZE];
+    int numbytes;
+    if((numbytes = recv(sockfd, buffer, MAXDATASIZE - 1, 0)) != 1 ){
+      // copy buf into buffercpy
+      char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
+      strcpy(buffercpy,buffer);
+      char *tokenptr;
+      tokenptr = strtok(buffercpy, ":");
+      tokenptr = strtok(NULL, ":");
 
-    printf("client: project length in bytes is %s \n", tokenptr);
-    off_t file_size = atoi(tokenptr);
-    char *file_buffer = (char*) malloc(sizeof(char) * file_size);
-    int bytes_recv = read(sockfd,file_buffer, file_size);
-    printf("client: bytes recieved from server %d\n", bytes_recv);
+      printf("client: project length in bytes is %s \n", tokenptr);
+      off_t file_size = atoi(tokenptr);
+      char *file_buffer = (char*) malloc(sizeof(char) * file_size);
+      int bytes_recv = read(sockfd,file_buffer, file_size);
+      printf("client: bytes recieved from server %d\n", bytes_recv);
 
-    // write the bytes into a file
-    char *untar = "tar -zxvf client.tar.gz";
-    int finalfd = open("client.tar.gz", O_CREAT | O_RDWR ,0666);
-    int writtenbytes = write(finalfd,file_buffer,file_size);
-    perror(strerror(errno));
-    printf("client: bytes written to file %d\n", writtenbytes);
-    system(untar); 
-    system("rm -rf client.tar.gz");
-    printf("%s was a sucess\n", cmd);
-    free(file_buffer);
-    free(buffercpy);
-  } else {
-    printf("%s\n",msg);
-  }
-}
-
-
-// writes to .Configure file
-void configure(char* host, char* port){
-  if( access(".configure", F_OK ) != -1 ) {
-    printf("found .configure, rewriting it!\n");
-  } else {
-    printf("creating .configure file\n");
+      // write the bytes into a file
+      char *untar = "tar -zxvf client.tar.gz";
+      int finalfd = open("client.tar.gz", O_CREAT | O_RDWR ,0666);
+      int writtenbytes = write(finalfd,file_buffer,file_size);
+      perror(strerror(errno));
+      printf("client: bytes written to file %d\n", writtenbytes);
+      system(untar); 
+      printf("\n");
+      system("rm -rf client.tar.gz");
+      printf("%s was a sucess\n", cmd);
+      free(file_buffer);
+      free(buffercpy);
+    } else {
+      printf("%s\n",msg);
+    }
   }
 
-  // create configure file
-  int configure_fd = open(".configure", O_CREAT | O_RDWR ,0666);
-
-  int len = strlen(host) + strlen(port) + 1;
-  char config_buf[len];
-  sprintf(config_buf, "%s:%s",host,port);
-  int writtenbytes = write(configure_fd,config_buf,len);
-  if(writtenbytes <= 0){
-    printf("failed to create a configure file");
-  } else {
-    printf("wrote %d bytes to configure file\n", writtenbytes);
-  }
-}
-
-int main(int argc, char *argv[])
-{
-  if (argc < 2) {
-    fprintf(stderr,"not enough arguments usage => ./WTF <command> \n");
-    exit(1);
-  }
-
-  char *op = argv[1]; 
-
-  if(strcmp(op,"add") == 0){
-    if(argc<4){
-      printf("Not enough arguements. Usage => ./WTF add <project name> <filename>\n");
+  int main(int argc, char *argv[])
+  {
+    char *h = hash(argv[1]);
+    if (argc < 2) {
+      fprintf(stderr,"not enough arguments usage => ./WTF <command> \n");
       exit(1);
     }
-    addFile(argv[2],argv[3]);
-    exit(0);
-  }
-  if(strcmp(op,"remove") == 0){
-    if(argc<4){
-      printf("Not enough arguements. Usage => ./WTF remove <project name> <filename>\n");
-      exit(1);
-    }
-    removeFile(argv[2],argv[3]);
-    exit(0);
-  }
 
-  if(strcmp(op,"configure") == 0){
-    if(argc < 4){
-  printf("not enough arguments usage => ./WTF configure `hostname` `port` \n");
-  return 1;
+    char *op = argv[1]; 
+
+    if(strcmp(op,"add") == 0){
+      if(argc<4){
+	printf("Not enough arguements. Usage => ./WTF add <project name> <filename>\n");
+	exit(1);
+      }
+      addFile(argv[2],argv[3]);
+      exit(0);
     }
-    char *host = argv[2];
-    char *port = argv[3];
-    configure(host,port);
-    return 0;
-  } 
+    if(strcmp(op,"remove") == 0){
+      if(argc<4){
+	printf("Not enough arguements. Usage => ./WTF remove <project name> <filename>\n");
+	exit(1);
+      }
+      removeFile(argv[2],argv[3]);
+      exit(0);
+    }
+
+    if(strcmp(op,"configure") == 0){
+      if(argc < 4){
+	printf("not enough arguments usage => ./WTF configure `hostname` `port` \n");
+	return 1;
+      }
+      char *host = argv[2];
+      char *port = argv[3];
+      configure(host,port);
+      return 0;
+    } 
 
     if(argc<3){
       printf("Incorrect arguements. Usage => ./WTF <command> <project name> <optional>\n");
       exit(1);
     }
 
-  int sockfd, numbytes;  
-  char buf[MAXDATASIZE];
-  struct addrinfo hints, *servinfo, *p;
-  int rv;
-  char s[INET6_ADDRSTRLEN];
+    int sockfd, numbytes;  
+    char buf[MAXDATASIZE];
+    struct addrinfo hints, *servinfo, *p;
+    int rv;
+    char s[INET6_ADDRSTRLEN];
 
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    // open configure file
+    int configure_fd = open(".configure", O_RDONLY,0666);
 
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  // open configure file
-  int configure_fd = open(".configure", O_RDONLY,0666);
+    off_t fsize;
+    fsize = lseek(configure_fd,0,SEEK_END);
+    lseek(configure_fd,0,0);
+    char config_buff[fsize];
+    int bytes_read = read(configure_fd, config_buff, fsize);
+    if(bytes_read <= 0){
+      printf("error in reading configure file\n");
+      return 1;
+    }
+    char *hostname; 
+    char *port;
+    //read buffer to get hostname and port
+    char * curLine = config_buff;
+    int cnt = 0;
+    printf("config buff : %s\n", config_buff);
 
-  off_t fsize;
-  fsize = lseek(configure_fd,0,SEEK_END);
-  lseek(configure_fd,0,0);
-  char config_buff[fsize];
-  int bytes_read = read(configure_fd, config_buff, fsize);
-  if(bytes_read <= 0){
-    printf("error in reading configure file\n");
-    return 1;
-  }
-  char *hostname; 
-  char *port;
-  //read buffer to get hostname and port
-  char * curLine = config_buff;
-  int cnt = 0;
-  printf("config buff : %s\n", config_buff);
-
-  char *configptr;
-  configptr = strtok(config_buff, ":");
-  hostname = configptr;
-  configptr = strtok(NULL, ":");
-  port = configptr;
-  // ok now we got host and port from .config
-  if ((rv = getaddrinfo(hostname, port , &hints, &servinfo)) != 0) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-    return 1;
-  }
-
-  // loop through all the results and connect to the first we can
-  for(p = servinfo; p != NULL; p = p->ai_next) {
-    if ((sockfd = socket(p->ai_family, p->ai_socktype,
-      p->ai_protocol)) == -1) {
-      perror("client: socket");
-      continue;
+    char *configptr;
+    configptr = strtok(config_buff, ":");
+    hostname = configptr;
+    configptr = strtok(NULL, ":");
+    port = configptr;
+    // ok now we got host and port from .config
+    if ((rv = getaddrinfo(hostname, port , &hints, &servinfo)) != 0) {
+      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+      return 1;
     }
 
-    if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+    // loop through all the results and connect to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+      if ((sockfd = socket(p->ai_family, p->ai_socktype,
+	      p->ai_protocol)) == -1) {
+	perror("client: socket");
+	continue;
+      }
+
+      if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+	close(sockfd);
+	perror("client: connect");
+	continue;
+      }
+
+      break;
+    }
+
+    if (p == NULL) {
+      fprintf(stderr, "client: failed to connect\n");
+      return 2;
+    }
+
+    inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
+    printf("client: connecting to %s\n", s);
+    freeaddrinfo(servinfo); // all done with this structure
+
+    // parse command
+    if(strcmp(op,"checkout") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF checkout <project name>\n");
+	exit(1);
+      }
+      if(doesConfigureExist() == 0){
+	printf("No .configure file found. Please run configure\n");
+	return 1;
+      }
+      if(argc < 3){
+	printf("no project name given usage -> ./WTF checkout `projectname`");
+	return 1;
+      }
+      // send client cmd and project name in the following format checkout:projectname
+      char *projname = argv[2];
+      printf("getting %s from server...\n", projname);
+      char checkout_buff[strlen("checkout:") + strlen(projname)];
+      sprintf(checkout_buff,"checkout:%s",projname);
+      // now the cmd string is ready, lets send it to the server to get our projetc
+      send(sockfd,checkout_buff,strlen(checkout_buff),0);
+      // now we wait for the response 
+      recv_file_from_server(sockfd,"checkout","the server could not find the project\n");
+      // server response, file parsing and untarring done here
       close(sockfd);
-      perror("client: connect");
-      continue;
+      printf("checkout\n");
+      exit(1);
+    } 
+    // CREATE, ADD, COMMIT, PUSH
+    // CREATE .Manifest 1 and \n
+    if(strcmp(op,"update") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF update <project name>\n");
+	exit(1);
+      }
+      char* projname = argv[2];
+      printf("updating %s from server...\n", projname);
+      update(sockfd, projname);
+      printf("update\n");
+      exit(1);
+
+    } 
+    if(strcmp(op,"upgrade") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF upgrade <project name>\n");
+	exit(1);
+      }
+
+      // time to upgrade
+      char* projname = argv[2];
+      upgrade(sockfd,projname);
+      exit(1);
+
+    } 
+    if(strcmp(op,"commit") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF commit <project name>\n");
+	exit(1);
+      }
+    } 
+    if(strcmp(op,"push") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF push <project name>\n");
+	exit(1);
+      }
+    } 
+
+    if(strcmp(op,"create") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF create <project name>\n");
+	exit(1);
+      }
+      char *projname = argv[2];
+      printf("creating %s on server...\n", projname);
+      char create_buffer[strlen("create") + strlen(projname)];
+      sprintf(create_buffer,"create:%s",projname);
+      // now the cmd string is ready, lets send it to the server to get our projetc
+      send(sockfd,create_buffer,strlen(create_buffer),0);
+      recv_file_from_server(sockfd,"create","project already exists on server!\n");
+      close(sockfd);
+      exit(1);
+    } 
+
+    if(strcmp(op,"destroy") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF destroy <project name>\n");
+	exit(1);
+      }
+      // check for configure
+      char *projname = argv[2];
+      printf("destroying %s on server...\n", projname);
+      char destroy_buffer[strlen("destroy:") + strlen(projname)];
+      sprintf(destroy_buffer,"destroy:%s",projname);
+      send(sockfd,destroy_buffer,strlen(destroy_buffer),0);
+      int destroy_response;
+      char dbuffer[MAXDATASIZE];
+      if((destroy_response = recv(sockfd, dbuffer, MAXDATASIZE - 1, 0)) != 1 ){
+	printf("project does not exist on server, nothing to destroy\n");
+      } else{
+	printf("destroyed %s on server!\n", projname);
+      }
+      printf("destroy\n");
+      exit(1);
     }
 
-    break;
-  }
+    if(strcmp(op,"currentversion") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF currentversion <project name>\n");
+	exit(1);
+      }
+    }
 
-  if (p == NULL) {
-    fprintf(stderr, "client: failed to connect\n");
-    return 2;
-  }
-
-  inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
-  printf("client: connecting to %s\n", s);
-  freeaddrinfo(servinfo); // all done with this structure
-
-  // parse command
-  if(strcmp(op,"checkout") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF checkout <project name>\n");
-      exit(1);
+    if(strcmp(op,"history") == 0){
+      if(argc!=3){
+	printf("Incorrect arguements. Usage => ./WTF history <project name>\n");
+	exit(1);
+      }
     }
-    if(doesConfigureExist() == 0){
-      printf("No .configure file found. Please run configure\n");
-      return 1;
+    if(strcmp(op,"rollback") == 0){
+      if(argc!=4){
+	printf("Incorrect arguements. Usage => ./WTF rollback <project name> <version>\n");
+	exit(1);
+      }
     }
-    if(argc < 3){
-      printf("no project name given usage -> ./WTF checkout `projectname`");
-      return 1;
-    }
-    // send client cmd and project name in the following format checkout:projectname
-    char *projname = argv[2];
-    printf("getting %s from server...\n", projname);
-    char checkout_buff[strlen("checkout:") + strlen(projname)];
-    sprintf(checkout_buff,"checkout:%s",projname);
-    // now the cmd string is ready, lets send it to the server to get our projetc
-    send(sockfd,checkout_buff,strlen(checkout_buff),0);
-    // now we wait for the response 
-    recv_file_from_server(sockfd,"checkout","the server could not find the project\n");
-    // server response, file parsing and untarring done here
-    close(sockfd);
-    printf("checkout\n");
-  } 
-  // CREATE, ADD, COMMIT, PUSH
-  // CREATE .Manifest 1 and \n
-  if(strcmp(op,"update") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF update <project name>\n");
-      exit(1);
-    }
-    char* projname = argv[2];
-    printf("updating %s from server...\n", projname);
-    update(sockfd, projname);
-    printf("update\n");
-    
-  } 
-  if(strcmp(op,"upgrade") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF upgrade <project name>\n");
-      exit(1);
-    }
-  } 
-  if(strcmp(op,"commit") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF commit <project name>\n");
-      exit(1);
-    }
-  } 
-  if(strcmp(op,"push") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF push <project name>\n");
-      exit(1);
-    }
-  } 
-  if(strcmp(op,"create") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF create <project name>\n");
-      exit(1);
-    }
-    char *projname = argv[2];
-    printf("creating %s on server...\n", projname);
-    char create_buffer[strlen("create") + strlen(projname)];
-    sprintf(create_buffer,"create:%s",projname);
-    // now the cmd string is ready, lets send it to the server to get our projetc
-    send(sockfd,create_buffer,strlen(create_buffer),0);
-    recv_file_from_server(sockfd,"create","project already exists on server!\n");
-    close(sockfd);
-  } 
-  if(strcmp(op,"destroy") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF destroy <project name>\n");
-      exit(1);
-    }
-    // check for configure
-    char *projname = argv[2];
-    printf("destroying %s on server...\n", projname);
-    char destroy_buffer[strlen("destroy:") + strlen(projname)];
-    sprintf(destroy_buffer,"destroy:%s",projname);
-    send(sockfd,destroy_buffer,strlen(destroy_buffer),0);
-    int destroy_response;
-    char dbuffer[MAXDATASIZE];
-    if((destroy_response = recv(sockfd, dbuffer, MAXDATASIZE - 1, 0)) != 1 ){
-      printf("project does not exist on server, nothing to destroy\n");
-    } else{
-      printf("destroyed %s on server!\n", projname);
-    }
-    printf("destroy\n");
-  }
-  if(strcmp(op,"currentversion") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF currentversion <project name>\n");
-      exit(1);
-    }
-  }
-
-  if(strcmp(op,"history") == 0){
-    if(argc!=3){
-      printf("Incorrect arguements. Usage => ./WTF history <project name>\n");
-      exit(1);
-    }
-  }
-  if(strcmp(op,"rollback") == 0){
-    if(argc!=4){
-      printf("Incorrect arguements. Usage => ./WTF rollback <project name> <version>\n");
-      exit(1);
-    }
-  }
-
-  // wait to recieve the response.
 }
