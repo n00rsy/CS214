@@ -79,6 +79,7 @@ void send_client_project(int client_fd, char* project_name){
     perror(strerror(errno));
   } else {
     printf("server: sent client %d bytes\n", bytes_written);
+    system("rm -rf result.tar.gz");
   }
 }
 
@@ -94,13 +95,14 @@ void send_client_manifest(int client_fd, char* filePath){
 
   // get manifest ( projname/.Manifest)
   int manifest_fd = open(filePath, O_RDONLY);
+  if(manifest_fd < 0){
     perror("couldnt open tar file");
   }
 
   // get length of file
   off_t fsize;
   fsize = lseek(manifest_fd,0,SEEK_END);
-  lseek(project_descriptor,0,0);
+  lseek(manifest_fd,0,0);
 
   // printf("file len of tar: %ld\n", fsize);
 
@@ -147,6 +149,7 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
      
       char *tokenptr;
       tokenptr = strtok(buffercpy, ":");
+      printf("server: cmd from client %s\n",tokenptr);
       while(tokenptr != NULL){
 	if(strcmp(tokenptr,"checkout") == 0){
 	  // clients to checkout. lets do it
@@ -160,7 +163,6 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
 	  printf("server: sending client the project -> %s \n", tokenptr);
 	  send_client_project(client_descriptor, tokenptr);
 	  free(buffercpy);
-	  break;
 	} else if(strcmp(tokenptr,"update") == 0){
 	  // check if project name exists and .Manifest exists
 	  tokenptr = strtok(NULL, ":");
@@ -178,7 +180,8 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
 	} else if(strcmp(tokenptr,"create") == 0){
 	  // check if project name exists 
 	  tokenptr = strtok(NULL, ":");
-	  if(!exist(tokenptr)){
+	  printf("tokenptr: %s\n",tokenptr);
+	  if(exist(tokenptr)){
 	    printf("server: project already exists!\n");
 	    char dummybuffer[1];
 	    send(client_descriptor,dummybuffer,1,0);
@@ -197,12 +200,28 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
              // send client the project
              send_client_project(client_descriptor,tokenptr);
              free(buffercpy);
-          }
-        }
-      }
-    } 
+	  } 
+	} else if(strcmp(tokenptr,"destroy") == 0){
+	  // check if project name exists 
+	  tokenptr = strtok(NULL, ":");
+	  printf("tokenptr: %s\n",tokenptr);
+	  if(!exist(tokenptr)){
+	    printf("server: project does not exist!\n");
+	    char *response = "project does not exist\n";
+	    send(client_descriptor,response,strlen(response),0);
+	  } else {
+	    // destroy the project
+	    printf("destroying %s\n",tokenptr);
+	    char buffer[strlen(tokenptr) + 7];
+	    sprintf(buffer, "rm -rf %s", tokenptr);
+	    system(buffer);
+	    char dummybuffer[1];
+	    send(client_descriptor,dummybuffer,1,0);
+	  }
+	}
+      } 
+    }
   }
-
   return NULL;
 }
 

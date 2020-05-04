@@ -856,7 +856,40 @@ int doesConfigureExist(){
     return 0;
   }
 }
+// generic function to recieve a file with a msg depending on cmd.
+// for exmaple if checkout fails, msg should be "project couldnt be found"
+void recv_file_from_server(int sockfd, char*cmd,  char* msg){
+  char buffer[MAXDATASIZE];
+  int numbytes;
+  if((numbytes = recv(sockfd, buffer, MAXDATASIZE - 1, 0)) != 1 ){
+    // copy buf into buffercpy
+    char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
+    strcpy(buffercpy,buffer);
+    char *tokenptr;
+    tokenptr = strtok(buffercpy, ":");
+    tokenptr = strtok(NULL, ":");
 
+    printf("client: project length in bytes is %s \n", tokenptr);
+    off_t file_size = atoi(tokenptr);
+    char *file_buffer = (char*) malloc(sizeof(char) * file_size);
+    int bytes_recv = read(sockfd,file_buffer, file_size);
+    printf("client: bytes recieved from server %d\n", bytes_recv);
+
+    // write the bytes into a file
+    char *untar = "tar -zxvf client.tar.gz";
+    int finalfd = open("client.tar.gz", O_CREAT | O_RDWR ,0666);
+    int writtenbytes = write(finalfd,file_buffer,file_size);
+    perror(strerror(errno));
+    printf("client: bytes written to file %d\n", writtenbytes);
+    system(untar); 
+    system("rm -rf client.tar.gz");
+    printf("%s was a sucess\n", cmd);
+    free(file_buffer);
+    free(buffercpy);
+  } else {
+    printf("%s\n",msg);
+  }
+}
 int main(int argc, char *argv[])
 {
   if (argc < 2) {
@@ -983,39 +1016,13 @@ int main(int argc, char *argv[])
     // send client cmd and project name in the following format checkout:projectname
     char *projname = argv[2];
     printf("getting %s from server...\n", projname);
-    char checkout_buff[strlen("checkout") + strlen(projname)];
+    char checkout_buff[strlen("checkout:") + strlen(projname)];
     sprintf(checkout_buff,"checkout:%s",projname);
     // now the cmd string is ready, lets send it to the server to get our projetc
     send(sockfd,checkout_buff,strlen(checkout_buff),0);
-
+    // now we wait for the response 
+    recv_file_from_server(sockfd,"checkout","the server could not find the project\n");
     // server response, file parsing and untarring done here
-    if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
-      // copy buf into buffercpy
-      char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
-      strcpy(buffercpy,buf);
-      char *tokenptr;
-      tokenptr = strtok(buffercpy, ":");
-      tokenptr = strtok(NULL, ":");
-      printf("client: project length in bytes is %s \n", tokenptr);
-      off_t file_size = atoi(tokenptr);
-      char *file_buffer = (char*) malloc(sizeof(char) * file_size);
-      int bytes_recv = read(sockfd,file_buffer, file_size);
-      printf("client: bytes recieved from server %d\n", bytes_recv);
-
-      // write the bytes into a file
-      char *untar = "tar -zxvf client.tar.gz";
-      int finalfd = open("client.tar.gz", O_CREAT | O_RDWR ,0666);
-      int writtenbytes = write(finalfd,file_buffer,file_size);
-      perror(strerror(errno));
-      printf("client: bytes written to file %d\n", writtenbytes);
-      system(untar); 
-      system("rm -rf client.tar.gz");
-      printf("checkout was a sucess\n");
-      free(file_buffer);
-      free(buffercpy);
-    } else {
-       printf("the server could not find the project \n");
-    }
     close(sockfd);
     printf("checkout\n");
   } 
@@ -1055,21 +1062,34 @@ int main(int argc, char *argv[])
       printf("Incorrect arguements. Usage => ./WTF create <project name>\n");
       exit(1);
     }
-        // does project name exist on server, then fail
-        // server creates dir, with .Manifest, write 1 and \n
-        // send it to client as well
     char *projname = argv[2];
     printf("creating %s on server...\n", projname);
     char create_buffer[strlen("create") + strlen(projname)];
     sprintf(create_buffer,"create:%s",projname);
     // now the cmd string is ready, lets send it to the server to get our projetc
     send(sockfd,create_buffer,strlen(create_buffer),0);
+    recv_file_from_server(sockfd,"create","project already exists on server!\n");
+    close(sockfd);
   } 
   if(strcmp(op,"destroy") == 0){
     if(argc!=3){
       printf("Incorrect arguements. Usage => ./WTF destroy <project name>\n");
       exit(1);
     }
+    // check for configure
+    char *projname = argv[2];
+    printf("destroying %s on server...\n", projname);
+    char destroy_buffer[strlen("destroy:") + strlen(projname)];
+    sprintf(destroy_buffer,"destroy:%s",projname);
+    send(sockfd,destroy_buffer,strlen(destroy_buffer),0);
+    int destroy_response;
+    char dbuffer[MAXDATASIZE];
+    if((destroy_response = recv(sockfd, dbuffer, MAXDATASIZE - 1, 0)) != 1 ){
+      printf("project does not exist on server, nothing to destroy\n");
+    } else{
+      printf("destroyed %s on server!\n", projname);
+    }
+    printf("destroy\n");
   }
   if(strcmp(op,"currentversion") == 0){
     if(argc!=3){

@@ -2,7 +2,7 @@ make:
 	make server
 	make client
 server:
-	gcc server/server.c -pthread -o WTFServer
+	gcc server.c -pthread -o WTFServer
 client:
 	gcc client.c -lssl -lcrypto -pthread -o WTF
 hash:
