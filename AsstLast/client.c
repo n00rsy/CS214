@@ -34,10 +34,16 @@ typedef struct dotfile_struct {
 
   void recv_file_from_server(int sockfd, char*cmd,  char* msg);
 
-void printFileNode(fileNode * fNode){
+  void printFileNode(fileNode * fNode, int hash){
+    if(hash==1){
   printf("File version num: %d\tpath: '%s'\thash: '%s'\n",
       fNode->versionNum, fNode->filePath, fNode->hash);
-}
+  }
+  else{
+    printf("File version num: %d\tpath: %s\n",
+      fNode->versionNum, fNode->filePath);
+    }
+  }
 
 void printManifest(manifestStruct * man){
   printf("Manifest Version Number: %d\n\n", man->versionNum);
@@ -49,7 +55,7 @@ void printManifest(manifestStruct * man){
   }
 
   while(ptr!=NULL){
-    printFileNode(ptr);
+    printFileNode(ptr,0);
     ptr=ptr->next;
   }
 
@@ -740,21 +746,29 @@ int upgrade(int sockfd, char * projectName){
   free(conflictPath);
 }
 
-int commit(char * projectName){
+int commit(int sockfd, char * projectName){
 
   char * manifestPath = getManifestPath(projectName);
   manifestStruct * clientManifest = readManifest(manifestPath);
 
   if(clientManifest ==NULL){
     printf("Unable to open manifest or corrupted manifest\n");
+    free(manifestPath);
     return 0;
   }
 
-  //check if project exists on server
-  //check if client can communicate with server
-  //fetch server manifest, fail if not possible
+  // get project manifest from server. we will call it .ManifestFromServer to avoid rewriting
+  // local copy
+  char*manifestFromServerPath = getProjectManifestFromServer(sockfd, projectName); 
 
-  manifestStruct * serverManifest = readManifest("serverTest/.Manifest");
+  //get create manifest struct from manifest downloaded from server
+  manifestStruct * serverManifest = readManifest(manifestFromServerPath);
+
+  if(serverManifest == NULL){
+    printf("Failed to fetch manifest from server.\n");
+    freeManifest(clientManifest);
+    return 0;
+  }
 
   //fail if client and server manifests are different versions
   if(serverManifest->versionNum!=clientManifest->versionNum){
@@ -852,6 +866,30 @@ int commit(char * projectName){
   free(commitPath);
   freeManifest(clientManifest);
   freeManifest(serverManifest);
+
+  //send .Commit to server
+  printf("Successfully processed commit. Ready to push.\n");
+}
+
+
+int getCurrentVersion(int sockfd, char * projectName){
+  //check if project exists on server
+
+  // get project manifest from server. we will call it .ManifestFromServer to avoid rewriting
+  // local copy
+  char*manifestFromServerPath = getProjectManifestFromServer(sockfd, projectName); 
+
+  //get create manifest struct from manifest downloaded from server
+  manifestStruct * serverManifest = readManifest(manifestFromServerPath);
+
+  if(serverManifest == NULL){
+    printf("Failed to fetch manifest from server.\n");
+    return 0;
+  }
+
+  printManifest(serverManifest);
+  freeManifest(serverManifest);
+  remove(manifestFromServerPath);
 }
 
   // get sockaddr, IPv4 or IPv6:
@@ -1074,6 +1112,7 @@ int commit(char * projectName){
 	printf("Incorrect arguements. Usage => ./WTF commit <project name>\n");
 	exit(1);
       }
+      commit(sockfd, argv[2]);
     } 
     if(strcmp(op,"push") == 0){
       if(argc!=3){
@@ -1125,6 +1164,7 @@ int commit(char * projectName){
 	printf("Incorrect arguements. Usage => ./WTF currentversion <project name>\n");
 	exit(1);
       }
+      getCurrentVersion(sockfd, argv[2]);
     }
 
     if(strcmp(op,"history") == 0){
