@@ -71,6 +71,39 @@ void freeManifest(manifestStruct * man){
   freeFileNode(ptr);
 }
 
+
+char * hash(char * filePath){
+
+  char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
+
+  c[MD5_DIGEST_LENGTH] = '\0';
+  int i;
+  int inFile = open (filePath, O_RDONLY);
+  MD5_CTX mdContext;
+  int bytes;
+  unsigned char data[1024];
+
+  if (inFile <0) {
+    printf ("%s can't be opened.\n", filePath);
+    return NULL;
+  }
+
+  MD5_Init (&mdContext);
+  while (bytes = read (inFile,data,1023)){
+    MD5_Update (&mdContext, data, bytes);
+  }
+  MD5_Final (c,&mdContext);
+  for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
+  printf (" %s\n", filePath);
+  close (inFile);
+  if(strcmp(c, "")==0){
+    c = "<empty file>";
+  }
+  return c;
+
+
+}
+
 char * getManifestPath(char * projectName){
   int mainfestPathLen = strlen(projectName)+12;
   char * manifestPath = (char *)malloc(mainfestPathLen*sizeof(char));
@@ -101,94 +134,6 @@ char * getCommitPath(char * projectName){
   strcpy(manifestPath, projectName);
   strcat(manifestPath, "/.Commit");
   return manifestPath;
-}
-
-
-// writes to .Configure file
-void configure(char* host, char* port){
-  if( access(".configure", F_OK ) != -1 ) {
-    printf("found .configure, rewriting it!\n");
-  } else {
-    printf("creating .configure file\n");
-  }
-
-  // create configure file
-  int configure_fd = open(".configure", O_CREAT | O_RDWR ,0666);
-
-  int len = strlen(host) + strlen(port) + 1;
-  char config_buf[len];
-  sprintf(config_buf, "%s:%s",host,port);
-  int writtenbytes = write(configure_fd,config_buf,len);
-  if(writtenbytes <= 0){
-   printf("failed to create a configure file");
-  } else {
-    printf("wrote %d bytes to configure file\n", writtenbytes);
-  }
-}
-
-char* getProjectManifestFromServer(int sockfd, char *projname){
-  int numbytes;
-  char buf[MAXDATASIZE];
-  if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
-
-    // get size of manifest from server
-    char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
-    strcpy(buffercpy,buf);
-    char *tokenptr;
-    tokenptr = strtok(buffercpy, ":");
-    tokenptr = strtok(NULL, ":");
-    printf("client: project length in bytes is %s \n", tokenptr);
-    off_t file_size = atoi(tokenptr);
-
-    // prepare to read manifest
-    char *file_buffer = (char*) malloc(sizeof(char) * file_size);
-    int bytes_recv = read(sockfd,file_buffer, file_size);
-    printf("client: bytes recieved from server %d\n", bytes_recv);
-
-    // write the bytes into a file
-    char* localManifestPath = getManifestPath(projname);
-    strcat(localManifestPath,"FromServer");
-    int finalfd = open(localManifestPath, O_CREAT | O_RDWR ,0666);
-    int writtenbytes = write(finalfd,file_buffer,file_size);
-    perror(strerror(errno));
-    return localManifestPath;
-  }
-}
-
-
-char * hash(char * filePath){
-  /*
-    char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
-    
-    c[MD5_DIGEST_LENGTH] = '\0';
-  int i;
-  int inFile = open (filePath, O_RDONLY);
-  MD5_CTX mdContext;
-  int bytes;
-  unsigned char data[1024];
-
-  if (inFile <0) {
-    printf ("%s can't be opened.\n", filePath);
-    return NULL;
-  }
-
-  MD5_Init (&mdContext);
-  while (bytes = read (inFile,data,1023)){
-    MD5_Update (&mdContext, data, bytes);
-  }
-  MD5_Final (c,&mdContext);
-  for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
-  printf (" %s\n", filePath);
-  close (inFile);
-  if(strcmp(c, "")==0){
-    c = "<empty file>";
-  }
-  return c;
-  */
-
-  char * ye = malloc(10*sizeof(char));
-  ye= "ye";
-  return ye;
 }
 
 //parses line in format <version num> \t <path/name> \t <hash> \t
@@ -356,25 +301,27 @@ int writeManifest(manifestStruct * man, char * manifestPath){
   close(manifest);
 }
 
-int writeConflict(char * filePath, char * hash, char * projectName){
-  printf("C %s\n", filePath);
+int writeConflict(fileNode * fNode, char * projectName){
+  printf("C %s\n", fNode->filePath);
   char * conflictPath = getConflictPath(projectName);
   int conflict = open(conflictPath,O_RDWR | O_CREAT | O_APPEND, 0666);
   if(conflict<0){
     printf("Failed to open .conflict\n");
     return 0;
   }
-  write(conflict,"C\t",2);
+  char str[12];
+  sprintf(str, "C\t%d\t", fNode->versionNum);
+  write(conflict,str,strlen(str));
 
-  write(conflict, filePath, strlen(filePath));
+  write(conflict, fNode->filePath, strlen(fNode->filePath));
   write(conflict, "\t",1);
-  write(conflict, hash, strlen(hash));
+  write(conflict, fNode->hash, strlen(fNode->hash));
   write(conflict, "\t\n",2);
   close(conflict);
 }
 
-int writeUpdate( char updateType, char * filePath, char * hash, char * projectName){
-  printf("%c %s\n",updateType, filePath);
+int writeUpdate(fileNode * fNode, char updateType, char * projectName){
+  printf("%c %s\n",updateType, fNode->filePath);
   char * updatePath = getUpdatePath(projectName);
   int update = open(updatePath,O_RDWR | O_CREAT | O_APPEND, 0666);
   if(update<0){
@@ -383,18 +330,18 @@ int writeUpdate( char updateType, char * filePath, char * hash, char * projectNa
   }
 
   char str[12];
-  sprintf(str, "%c\t", updateType);
+  sprintf(str, "%c\t%d\t", updateType, fNode->versionNum);
   write(update,str,strlen(str));
 
-  write(update, filePath, strlen(filePath));
+  write(update, fNode->filePath, strlen(fNode->filePath));
   write(update, "\t",1);
-  write(update, hash, strlen(hash));
+  write(update, fNode->hash, strlen(fNode->hash));
   write(update, "\t\n",2);
   close(update);
 }
 
-int writeCommit(char commitType, char * filePath, char * hash, char * projectName){
-  printf("%c %s\n",commitType, filePath);
+int writeCommit(fileNode * fNode, char commitType, char * projectName){
+  printf("%c %s\n",commitType, fNode->filePath);
   char * commitPath = getCommitPath(projectName);
   int commit = open(commitPath,O_RDWR | O_CREAT | O_APPEND, 0666);
   if(commit<0){
@@ -403,12 +350,12 @@ int writeCommit(char commitType, char * filePath, char * hash, char * projectNam
   }
 
     char str[12];
-  sprintf(str, "%c\t", commitType);
+  sprintf(str, "%c\t%d\t", commitType, fNode->versionNum);
   write(commit,str,strlen(str));
 
-  write(commit, filePath, strlen(filePath));
+  write(commit, fNode->filePath, strlen(fNode->filePath));
   write(commit, "\t",1);
-  write(commit, hash, strlen(hash));
+  write(commit, fNode->hash, strlen(fNode->hash));
   write(commit, "\t\n",2);
   close(commit);
 }
@@ -460,14 +407,10 @@ int addFile(char * projectName, char * filePath){
     free(manifestPath);
     return 0;
   }
-  if(new->hash == NULL){
-    printf("File %s does not exist.\n", new->filePath);
-    freeFileNode(new);
-    free(manifestPath);
-    return 0;
-  }
+
   if(man->head ==NULL){
     man->head = new;
+
   }
   else{
   fileNode * ptr = man->head;
@@ -568,6 +511,35 @@ int removeFile(char * projectName, char * filePath){
   return 1;
 }
 
+char* getProjectManifestFromServer(int sockfd, char *projname){
+  int numbytes;
+  char buf[MAXDATASIZE];
+  if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
+
+    // get size of manifest from server
+    char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
+    strcpy(buffercpy,buf);
+    char *tokenptr;
+    tokenptr = strtok(buffercpy, ":");
+    tokenptr = strtok(NULL, ":");
+    printf("client: project length in bytes is %s \n", tokenptr);
+    off_t file_size = atoi(tokenptr);
+
+    // prepare to read manifest
+    char *file_buffer = (char*) malloc(sizeof(char) * file_size);
+    int bytes_recv = read(sockfd,file_buffer, file_size);
+    printf("client: bytes recieved from server %d\n", bytes_recv);
+
+    // write the bytes into a file
+    char* localManifestPath = getManifestPath(projname);
+    strcat(localManifestPath,"FromServer");
+    int finalfd = open(localManifestPath, O_CREAT | O_RDWR ,0666);
+    int writtenbytes = write(finalfd,file_buffer,file_size);
+    perror(strerror(errno));
+    return localManifestPath;
+  }
+}
+
 int update(int sockfd, char * projectName){
 //check if project exists on server
 //check if client can communicate with server
@@ -585,19 +557,13 @@ int update(int sockfd, char * projectName){
     printf("Unable to open manifest or corrupted manifest\n");
     return 0;
   }
-  // get project manifest from server. we will call it .ManifestFromServer to avoid rewriting
-  // local copy
-  char*manifestFromServerPath = getProjectManifestFromServer(sockfd, projectName); 
 
-  //get create manifest struct from manifest downloaded from server
-  manifestStruct * serverManifest = readManifest(manifestFromServerPath);
+  //get manifest from server
 
-  if(serverManifest == NULL){
-    printf("Failed to fetch manifest from server.\n");
-    freeManifest(clientManifest);
-    return 0;
-  }
-
+  char *manifestFromServerPath = getProjectManifestFromServer(sockfd, projectName); 
+  manifestStruct * serverManifest = readManifest("serverTest/.Manifest");
+  printf("server version num: %d\n", serverManifest->versionNum);
+  
   //printManifest(clientManifest);
   //printManifest(serverManifest);
 
@@ -624,6 +590,7 @@ int update(int sockfd, char * projectName){
   fileNode * clientPtr = clientManifest->head;
   fileNode * serverPtr = serverManifest->head;
 
+
   while(clientPtr!=NULL){
     int found = 0;
     char * liveHash = hash(clientPtr->filePath);
@@ -634,20 +601,20 @@ int update(int sockfd, char * projectName){
         //conflict
         if(strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
            strcmp(liveHash,clientPtr->hash)!=0){
-          writeConflict(serverPtr->filePath, liveHash, projectName);
+          writeConflict(serverPtr, projectName);
         }
         //modify code
         if(clientPtr->versionNum!=serverPtr->versionNum &&
            strcmp(serverPtr->hash, clientPtr->hash)!=0 &&
            strcmp(clientPtr->hash, liveHash)==0){
-          writeUpdate('M', serverPtr->filePath, serverPtr->hash, projectName);
+          writeUpdate(serverPtr, 'M', projectName);
         }
       }
       serverPtr = serverPtr->next;
     }
     //delete code
     if(found == 0){
-      writeUpdate('D', clientPtr->filePath, clientPtr->hash, projectName);
+      writeUpdate(clientPtr, 'D', projectName);
     }
     printf("\n");
     serverPtr = serverManifest->head;
@@ -669,7 +636,7 @@ while(serverPtr!=NULL){
   }
   //add code
   if(found ==0){
-    writeUpdate('A', serverPtr->filePath, serverPtr->hash, projectName);
+    writeUpdate(serverPtr, 'A', projectName);
   }
   clientPtr = clientManifest->head;
   serverPtr = serverPtr->next;
@@ -774,14 +741,14 @@ int commit(char * projectName){
           found = 1;
         if(strcmp(clientPtr->hash, serverPtr->hash)==0 &&
            strcmp(liveHash,clientPtr->hash)!=0){
-          writeCommit('M', serverPtr->filePath, serverPtr->hash, projectName);
+          writeCommit(clientPtr, 'M',projectName);
         }
       }
         serverPtr = serverPtr->next;
       }
       //add code
       if(found == 0){
-        writeCommit('A', clientPtr->filePath, clientPtr->hash, projectName);
+        writeCommit(clientPtr, 'A', projectName);
       }
       serverPtr = serverManifest->head;
       clientPtr=clientPtr->next;
@@ -812,7 +779,7 @@ int commit(char * projectName){
     }
     //delete code
     if(found ==0){
-      writeCommit('D', serverPtr->filePath, serverPtr->hash, projectName);
+      writeCommit(clientPtr, 'D', projectName);
     }
     clientPtr = clientManifest->head;
     serverPtr = serverPtr->next;
@@ -822,22 +789,9 @@ int commit(char * projectName){
   freeManifest(serverManifest);
 }
 
-int push(char * projectName){
-  //check if project exists on server
 
-  // check if client has .commit
-  char * commitPath = getCommitPath(projectName);
-  int commit = open(commitPath, O_RDONLY);
-  if(commitPath<0){
-    printf("No .commit file. Cannot push.\n");
-    free(commitPath);
-    return 0;
-  }
 
-  //server lock repo and check if server commit is same as client. should do this with hash
-  //char * clientCommitHash = hash(commitPath);
-  //char * serverCommitHash = hash()
-}
+
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -890,6 +844,30 @@ void recv_file_from_server(int sockfd, char*cmd,  char* msg){
     printf("%s\n",msg);
   }
 }
+
+
+// writes to .Configure file
+void configure(char* host, char* port){
+  if( access(".configure", F_OK ) != -1 ) {
+    printf("found .configure, rewriting it!\n");
+  } else {
+    printf("creating .configure file\n");
+  }
+
+  // create configure file
+  int configure_fd = open(".configure", O_CREAT | O_RDWR ,0666);
+
+  int len = strlen(host) + strlen(port) + 1;
+  char config_buf[len];
+  sprintf(config_buf, "%s:%s",host,port);
+  int writtenbytes = write(configure_fd,config_buf,len);
+  if(writtenbytes <= 0){
+    printf("failed to create a configure file");
+  } else {
+    printf("wrote %d bytes to configure file\n", writtenbytes);
+  }
+}
+
 int main(int argc, char *argv[])
 {
   if (argc < 2) {
@@ -923,7 +901,6 @@ int main(int argc, char *argv[])
     }
     char *host = argv[2];
     char *port = argv[3];
-
     configure(host,port);
     return 0;
   } 
