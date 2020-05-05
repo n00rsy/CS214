@@ -33,7 +33,7 @@ typedef struct dotfile_struct {
 } manifestStruct;
 
   void recv_file_from_server(int sockfd, char*cmd,  char* msg);
-  int updateManifest(char*);
+  //int updateManifest(char*);
 
   void printFileNode(fileNode * fNode, int hash){
     if(hash==1){
@@ -46,27 +46,6 @@ typedef struct dotfile_struct {
     }
   }
 
-int updateManifest(char * pathToNewManifest){
-  manifestStruct * newManifest = readManifest(pathToNewManifest);
-  if(newManifest==NULL){
-    printf("error\n");
-    return 0;
-  }
-
-  newManifest->versionNum = newManifest->versionNum+1;
-  fileNode * ptr = newManifest->head;
-
-  while(ptr!=NULL){
-    char * liveHash = hash(ptr->filePath);//NEED TO GET FILE PATH ON SERVER!!!
-    if(strcmp(liveHash, ptr->hash)!=0){
-      ptr->versionNum = ptr->versionNum+1;
-      ptr->hash = liveHash;
-    }
-    ptr=ptr->next;
-  }
-  writeManifest(newManifest);
-  freeManifest(newManifest);
-}
 
 void printManifest(manifestStruct * man){
   printf("Manifest Version Number: %d\n\n", man->versionNum);
@@ -1026,6 +1005,32 @@ int getCurrentVersion(int sockfd, char * projectName){
     }
   }
 
+  int updateManifest(char * pathToNewManifest){
+    manifestStruct * newManifest = readManifest(pathToNewManifest);
+    if(newManifest==NULL){
+      printf("error\n");
+      return 0;
+    }
+
+    newManifest->versionNum = newManifest->versionNum+1;
+    fileNode * ptr = newManifest->head;
+
+    while(ptr!=NULL){
+      char * liveHash = hash(ptr->filePath);//NEED TO GET FILE PATH ON SERVER!!!
+      if(strcmp(liveHash, ptr->hash)!=0){
+        ptr->versionNum = ptr->versionNum+1;
+        ptr->hash = liveHash;
+      }
+      ptr=ptr->next;
+    }
+    writeManifest(newManifest, pathToNewManifest);
+    freeManifest(newManifest);
+  }
+
+  int push(char * projectName){
+    
+  }
+
   int main(int argc, char *argv[])
   {
     char *h = hash(argv[1]);
@@ -1201,9 +1206,8 @@ int getCurrentVersion(int sockfd, char * projectName){
 	printf("Incorrect arguements. Usage => ./WTF push <project name>\n");
 	exit(1);
       }
-      printf("\n");
-      printf("\n");
-      printf("\n");
+
+
 
     } 
 
