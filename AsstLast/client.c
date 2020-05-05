@@ -138,7 +138,7 @@ void configure(char* host, char* port){
   if(writtenbytes <= 0){
     printf("failed to create a configure file");
   } else {
-    printf("wrote %d bytes to configure file\n", writtenbytes);
+    // printf("wrote %d bytes to configure file\n", writtenbytes);
   }
 }
 
@@ -210,8 +210,6 @@ char * hash(char * filePath){
     MD5_Update (&mdContext, data, bytes);
   }
   MD5_Final (c,&mdContext);
-  for(i = 0; i < MD5_DIGEST_LENGTH; i++) printf("%02x", c[i]);
-  printf(" %s\n", filePath);
   close (inFile);
   if(strcmp(c, "")==0){
     c = "<empty file>";
@@ -904,7 +902,6 @@ int commit(int sockfd, char * projectName){
   if(s <= 0){
     perror(strerror(errno));
   } else {
-    printf("shit in my face %d\n" , s);
   }
 
   // send the actual file
@@ -979,18 +976,15 @@ void recv_file_from_server(int sockfd, char*cmd,  char* msg){
     tokenptr = strtok(buffercpy, ":");
     tokenptr = strtok(NULL, ":");
 
-    printf("client: project length in bytes is %s \n", tokenptr);
     off_t file_size = atoi(tokenptr);
     char *file_buffer = (char*) malloc(sizeof(char) * file_size);
     int bytes_recv = read(sockfd,file_buffer, file_size);
-    printf("client: bytes recieved from server %d\n", bytes_recv);
 
     // write the bytes into a file
     char *untar = "tar -zxvf client.tar.gz";
     int finalfd = open("client.tar.gz", O_CREAT | O_RDWR ,0666);
     int writtenbytes = write(finalfd,file_buffer,file_size);
     perror(strerror(errno));
-    printf("client: bytes written to file %d\n", writtenbytes);
     system(untar); 
     printf("\n");
     system("rm -rf client.tar.gz");
