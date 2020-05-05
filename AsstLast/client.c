@@ -190,9 +190,7 @@ char* getProjectManifestFromServer(int sockfd, char *projname){
   }
 }
 
-
 char * hash(char * filePath){
-  /*
   char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
 
   c[MD5_DIGEST_LENGTH] = '\0';
@@ -219,7 +217,6 @@ char * hash(char * filePath){
     c = "<empty file>";
   }
   return c;
-  */
   char * ye = malloc(5*sizeof(char));
   ye = "ye";
 }
@@ -871,7 +868,7 @@ int commit(int sockfd, char * projectName){
 	//error case
 	if(strcmp(clientPtr->hash, serverPtr->hash)!=0 &&
 	    serverPtr->versionNum>=clientPtr->versionNum){
-	  printf("Must sync with repo before committing changes.\n");
+	  printf("Must sync with repo before committing changes for project %s.\n",projectName);
 	  remove(commitPath);
 	  free(commitPath);
 	  freeManifest(clientManifest);
@@ -928,7 +925,7 @@ int commit(int sockfd, char * projectName){
   free(commitPath);
   freeManifest(clientManifest);
   freeManifest(serverManifest);
-  printf("Successfully processed commit. Ready to push.\n");
+  printf("Successfully processed commit for project %s. Ready to push.\n",projectName);
 }
 
 
@@ -943,7 +940,7 @@ int getCurrentVersion(int sockfd, char * projectName){
   manifestStruct * serverManifest = readManifest(manifestFromServerPath);
 
   if(serverManifest == NULL){
-    printf("Failed to fetch manifest from server.\n");
+    printf("Failed to get current version of %s because manifest does not exist on server.\n", projectName);
     return 0;
   }
 
@@ -1027,8 +1024,35 @@ int getCurrentVersion(int sockfd, char * projectName){
     freeManifest(newManifest);
   }
 
-  int push(char * projectName){
-    
+  int push(int sockfd, char * projectName){
+    char * manifestPath = getManifestPath(projectName);
+    manifestStruct * clientManifest = readManifest(manifestPath);
+
+    if(clientManifest ==NULL){
+      printf("Unable to push because no manifest or corrupted manifest\n");
+      free(manifestPath);
+      return 0;
+    }
+    // get project manifest from server. we will call it .ManifestFromServer to avoid rewriting
+    // local copy
+    char*manifestFromServerPath = getProjectManifestFromServer(sockfd, projectName); 
+
+    //get create manifest struct from manifest downloaded from server
+    manifestStruct * serverManifest = readManifest(manifestFromServerPath);
+
+    if(serverManifest == NULL){
+      printf("Failed push because failed to fetch manifest from server.\n");
+      freeManifest(clientManifest);
+      return 0;
+    }
+
+    char * commitPath = getCommitPath(projectName);
+    int commit = open(commitPath,O_RDONLY);
+    if(commit<0){
+      printf("Failed to push because no .Commit found for project %s\n", projectName);
+    }
+    updateManifest(serverManifest);
+    printf("Successfully pushed commit from project %s\n", projectName);
   }
 
   int main(int argc, char *argv[])
@@ -1206,8 +1230,7 @@ int getCurrentVersion(int sockfd, char * projectName){
 	printf("Incorrect arguements. Usage => ./WTF push <project name>\n");
 	exit(1);
       }
-
-
+      push(sockfd, argv[2]);
 
     } 
 
