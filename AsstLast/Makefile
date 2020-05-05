@@ -8,5 +8,4 @@ client:
 hash:
 	gcc -g -Wall -o hash hash.c -lssl -lcrypto
 	
-clean:
 	
