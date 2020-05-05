@@ -40,6 +40,16 @@ void *get_in_addr(struct sockaddr *sa)
 
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
+unsigned long hash(unsigned char *str)
+{
+  unsigned long hash = 5381;
+  int c;
+
+  while (c = *str++)
+    hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+  return hash;
+}
 
 // must be called from handle_client_connection
 void send_client_project(int client_fd, char* project_name){
@@ -92,16 +102,13 @@ int exist(char *name){
 }
 
 void send_client_manifest(int client_fd, char* filePath){
-
   // get manifest ( projname/.Manifest)
   int manifest_fd = open(filePath, O_RDONLY);
   if(manifest_fd < 0){
     perror("couldnt open tar file");
   }
-
-  // get length of file
-  off_t fsize;
-  fsize = lseek(manifest_fd,0,SEEK_END);
+// get length of file off_t fsize;
+  off_t fsize = lseek(manifest_fd,0,SEEK_END);
   lseek(manifest_fd,0,0);
 
   // printf("file len of tar: %ld\n", fsize);
@@ -114,15 +121,17 @@ void send_client_manifest(int client_fd, char* filePath){
   // byte representation of the file
   char *projbuffer = (char*) malloc(sizeof(char) * fsize);
   int bytes_read = read(manifest_fd,projbuffer, fsize);
+
   if(bytes_read < 0){
     perror(strerror(errno));
   }
-  printf("server: fsize: %ld bytes read into projbuffer: %d\n", fsize, bytes_read);
+
+  printf("server: %ld bytes read into manifest, now sending it to client: %d\n", fsize, bytes_read);
   int bytes_written = send(client_fd,projbuffer,fsize,0); 
   if (bytes_written <= 0) {
     perror(strerror(errno));
   } else {
-    printf("server: sent client %d bytes\n", bytes_written);
+    printf("server: sent client manifest in %d bytes\n", bytes_written);
   }
 }
 
@@ -140,16 +149,15 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
     char buffer[BUFFER_LEN];
     int num_bytes;
     size_t len;
+
     //recieve commands from client from here
     if((num_bytes = recv(client_descriptor, buffer, BUFFER_LEN, 0) != -1)){
       // the client will send something like checkout:projectname so we will seperate it.
       // copy the data recieved from client into a new array to tokenize 
       char *buffercpy= malloc(sizeof(char) * BUFFER_LEN);
       strcpy(buffercpy,buffer);
-     
       char *tokenptr;
       tokenptr = strtok(buffercpy, ":");
-
       printf("server: cmd from client %s with %d bytes\n",tokenptr, num_bytes);
       while(tokenptr != NULL){
 	if(strcmp(tokenptr,"checkout") == 0){
@@ -231,6 +239,63 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
 	    // just send the entire project back lmao
 	    printf("updating %s\n",tokenptr);
 	    send_client_project(client_descriptor,tokenptr);
+	  }
+	} else if(strcmp(tokenptr,"manifest") == 0){
+	  // return manifest for the project manifest:projectname
+	  tokenptr = strtok(NULL, ":");
+	  char manifestPath[strlen(tokenptr) + 1 + strlen(".Manifest")];
+	  sprintf(manifestPath,"%s/%s",tokenptr,".Manifest");
+	  if(!exist(tokenptr) || !exist(manifestPath)){
+	    printf("could not get manifest%s. Are you sure the project and its .Manifest exists?  \n",tokenptr);
+	  } else {
+	    printf("manifest path %s\n", manifestPath);
+	    send_client_manifest(client_descriptor,manifestPath);
+	  }
+	} else if (strcmp(tokenptr,"commit") == 0){
+	  // commit:projectname:length
+	  // client sending us a file
+	  char *buffercpy = malloc(sizeof(char) * MAXDATASIZE);
+	  strcpy(buffercpy,buffer);
+	  char *tokenptr;
+	  tokenptr = strtok(buffercpy, ":");
+	  tokenptr = strtok(NULL, ":");
+
+	  // get projectname
+	  char *projectname = malloc(sizeof(char) * strlen(tokenptr));
+	  memcpy(projectname,tokenptr,strlen(tokenptr));
+	  printf("server: preparing commit for %s\n", projectname);
+	  // hash the projectname so we can identify it when comparing commits
+ 	  unsigned long *project_name_hash = hash(projectname);
+
+	  // convert to project_name_hash to a string
+	  char hashbuffer[32];
+	  sprintf(hashbuffer,"%ln",project_name_hash);
+	  printf("conversion of hash to string %s\n", hashbuffer);
+ 	 
+	  // create final filename for .Commit (.Commit%hash)
+	  char commitfilename[strlen(hashbuffer) + 1 + strlen(".Commit")]; 
+	  sprintf(commitfilename,"%s#%s",".Commit",hashbuffer);
+	  printf("file commit file name: %s\n",commitfilename);
+
+	  // tokentpr is length portion of cmd  ( cmd = commit:projectname:length)
+	  tokenptr = strtok(NULL, ":");
+	  printf("server: commit file length in bytes is %s \n", tokenptr);
+
+          // recieve the commit file
+	  off_t file_size = atoi(tokenptr);
+	  char *file_buffer = (char*) malloc(sizeof(char) * file_size);
+	  int bytes_recv = read(client_descriptor,file_buffer, file_size);
+	  printf("server: bytes recieved from client %d\n", bytes_recv);
+
+	  char pathToCommit[strlen(projectname) + 1 + strlen(commitfilename)];
+	  sprintf(pathToCommit,"%s/%s",projectname,commitfilename);
+	  printf("path to commit: %s\n", pathToCommit);
+
+          // create it and write to it 
+	  int commit_fd = open(pathToCommit, O_CREAT | O_RDWR ,0666);
+	  int writtenbytes = write(commit_fd,file_buffer,file_size);
+	  if(writtenbytes <= 0){
+	    printf("error in writing commit: %d bytes \n",writtenbytes);
 	  }
 	}
       } 

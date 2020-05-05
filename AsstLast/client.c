@@ -142,6 +142,12 @@ void configure(char* host, char* port){
 }
 
 char* getProjectManifestFromServer(int sockfd, char *projname){
+  // tell server we want manifest
+  printf("requesting manifest\n");
+  char server_msg[strlen("manifest") + 1 + strlen(projname)];
+  sprintf(server_msg,"manifest:%s",projname);
+  send(sockfd,server_msg,strlen(server_msg),0);
+  
   int numbytes;
   char buf[MAXDATASIZE];
   if((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) != 1 ){
@@ -152,20 +158,33 @@ char* getProjectManifestFromServer(int sockfd, char *projname){
     char *tokenptr;
     tokenptr = strtok(buffercpy, ":");
     tokenptr = strtok(NULL, ":");
-    printf("client: project length in bytes is %s \n", tokenptr);
+    printf("client: manifest length in bytes is %s \n", tokenptr);
     off_t file_size = atoi(tokenptr);
 
     // prepare to read manifest
     char *file_buffer = (char*) malloc(sizeof(char) * file_size);
     int bytes_recv = read(sockfd,file_buffer, file_size);
+    if(bytes_recv <= 0){
+      printf("bytes_recv in getProjectManifest is %d", bytes_recv);
+      printf("getting project manifest from server failed, exiting....\n");
+      exit(1);
+    }
+
     printf("client: bytes recieved from server %d\n", bytes_recv);
 
     // write the bytes into a file
     char* localManifestPath = getManifestPath(projname);
+    printf("localManifestPath: %s\n", localManifestPath);
     strcat(localManifestPath,"FromServer");
+    char localManifestPathBuffer[strlen(localManifestPath) + strlen(projname) + 4];
+    sprintf(localManifestPathBuffer,"%s%s",projname,localManifestPath);
+    printf("localManifestPath before open: %s\n", localManifestPath);
     int finalfd = open(localManifestPath, O_CREAT | O_RDWR ,0666);
     int writtenbytes = write(finalfd,file_buffer,file_size);
-    perror(strerror(errno));
+    if(writtenbytes <= 0){
+      printf("error writing localManifest\n");
+      perror(strerror(errno));
+    }
     return localManifestPath;
   }
 }
@@ -783,6 +802,7 @@ int commit(int sockfd, char * projectName){
   char * updatePath = getUpdatePath(projectName);
   free(updatePath);
   int update = open(updatePath, O_RDONLY);
+
   if(update > 0){
     char buffer[100];
     if(read(update, buffer, 99)>0){
@@ -863,11 +883,46 @@ int commit(int sockfd, char * projectName){
     clientPtr = clientManifest->head;
     serverPtr = serverPtr->next;
   }
+
+  //send .Commit to server
+  int commitfd = open(commitPath,O_RDWR | O_CREAT | O_APPEND, 0666);
+  if(commit<0){
+    printf("Failed to open .Commit\n");
+    return 0;
+  }
+
+  off_t fsize;
+  fsize = lseek(commitfd,0,SEEK_END);
+  lseek(commitfd,0,0);
+
+  char server_msg[strlen("commit") + 1 + strlen(projectName) + 1 + 8];
+  sprintf(server_msg,"commit:%s:%ld",projectName,fsize);
+  int s = send(sockfd,server_msg,strlen(server_msg),0);
+
+  if(s <= 0){
+   perror(strerror(errno));
+  } else {
+    printf("shit in my face %d\n" , s);
+  }
+
+  // send the actual file
+  char commitBuffer[fsize];  
+  int bytes_read = read(commitfd,commitBuffer, fsize);
+  if(bytes_read < 0){
+    perror(strerror(errno));
+  }
+
+  printf("client: fsize: %ld bytes read into .Commit: %d\n", fsize, bytes_read);
+  int bytes_written = send(sockfd,commitBuffer,fsize,0); 
+  if (bytes_written <= 0) {
+    perror(strerror(errno));
+  } else {
+    printf("client: sent server %d bytes\n", bytes_written);
+  }
+
   free(commitPath);
   freeManifest(clientManifest);
   freeManifest(serverManifest);
-
-  //send .Commit to server
   printf("Successfully processed commit. Ready to push.\n");
 }
 
@@ -1113,6 +1168,7 @@ int getCurrentVersion(int sockfd, char * projectName){
 	exit(1);
       }
       commit(sockfd, argv[2]);
+      exit(1);
     } 
     if(strcmp(op,"push") == 0){
       if(argc!=3){
