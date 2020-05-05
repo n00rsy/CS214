@@ -172,6 +172,7 @@ char* getProjectManifestFromServer(int sockfd, char *projname){
 
 
 char * hash(char * filePath){
+  /*
   char * c = malloc((MD5_DIGEST_LENGTH+1)*sizeof(char));
 
   c[MD5_DIGEST_LENGTH] = '\0';
@@ -198,6 +199,9 @@ char * hash(char * filePath){
     c = "<empty file>";
   }
   return c;
+  */
+  char * ye = malloc(5*sizeof(char));
+  ye = "ye";
 }
 
 //parses line in format <version num> \t <path/name> \t <hash> \t
@@ -239,7 +243,7 @@ manifestStruct * readManifest(char * manifestPath){
 
   int manifestFD = open(manifestPath,O_RDWR);
   if(manifestFD<0){
-    printf(".Manifest not found\n");
+    //printf(".Manifest not found\n");
     return NULL;
   }
 
@@ -447,14 +451,14 @@ int addFile(char * projectName, char * filePath){
   DIR* d;
   d = opendir(projectName);
   if(d==NULL){
-    printf("Project does not exist.\n");
+    printf("Unable to add %s, Project %s does not exist.\n", filePath, projectName);
     return 0;
   }
 
   char * manifestPath =getManifestPath(projectName);
   manifestStruct * man = readManifest(manifestPath);
   if(man ==NULL){
-    printf("Unable to open manifest or corrupted manifest\n");
+    printf("Unable to add %s because no manifest or corrupted manifest\n", filePath);
     free(manifestPath);
     return 0;
   }
@@ -539,7 +543,7 @@ int removeFile(char * projectName, char * filePath){
   DIR* d;
   d = opendir(projectName);
   if(d==NULL){
-    printf("Project does not exist.\n");
+    printf("Unable to remove %s, Project %s does not exist.\n", filePath, projectName);
     return 0;
   }
 
@@ -547,7 +551,7 @@ int removeFile(char * projectName, char * filePath){
   manifestStruct * man = readManifest(manifestPath);
 
   if(man ==NULL){
-    printf("Unable to open manifest or corrupted manifest\n");
+    printf("Unable to remove %s because no manifest or corrupted manifest\n", filePath);
     return 0;
   }
 
@@ -584,7 +588,7 @@ int update(int sockfd, char * projectName){
   DIR* d;
   d = opendir(projectName);
   if(d==NULL){
-    printf("Project does not exist.\n");
+    printf("Unable to update, Project %s does not exist.\n", projectName);
     return 0;
   }
 
@@ -592,7 +596,7 @@ int update(int sockfd, char * projectName){
   manifestStruct * clientManifest = readManifest(manifestPath);
 
   if(clientManifest ==NULL){
-    printf("Unable to open manifest or corrupted manifest\n");
+    printf("Unable to update because no manifest or corrupted manifest\n");
     return 0;
   }
   // get project manifest from server. we will call it .ManifestFromServer to avoid rewriting
@@ -752,7 +756,7 @@ int commit(int sockfd, char * projectName){
   manifestStruct * clientManifest = readManifest(manifestPath);
 
   if(clientManifest ==NULL){
-    printf("Unable to open manifest or corrupted manifest\n");
+    printf("Unable to commit because no manifest or corrupted manifest\n");
     free(manifestPath);
     return 0;
   }
