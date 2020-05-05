@@ -21,6 +21,8 @@
 
 int total_conns = 0;
 
+pthread_mutex_t fastmutex = PTHREAD_MUTEX_INITIALIZER;
+
 void sigchld_handler(int s)
 {
   // waitpid() might overwrite errno, so we save and restore it:
@@ -304,8 +306,14 @@ void* handle_client_connection(void* client_fd)  // client file descriptor
   return NULL;
 }
 
-int main(void)
+int main(int argc, char ** argv)
 {
+  if(argc <= 1){
+	printf("incorrect usage: ./WTFServer PORT\n");
+	exit(1);
+  }
+  char *port = argv[1];
+
   int sockfd; // server will listen on sock_fd
   int new_fd;  // each new client connection has its own file descriptor
   struct addrinfo hints; // getaddrinfo will fill this struct out
@@ -330,7 +338,7 @@ int main(void)
   hints.ai_socktype = SOCK_STREAM; // SOCK_STREAM is TCP, we will use it for this project
   hints.ai_flags = AI_PASSIVE; // AI_PASSIVE means that we will use localhost to bind
 
-  if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
+  if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
     return 1;
   }
